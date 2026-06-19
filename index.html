@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vinted Dashboard — Gestion Business</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── RESET & BASE ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --border: #e2e4e9;
+      --text: #1a1d23;
+      --text-muted: #6b7280;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --green: #16a34a;
+      --green-light: #f0fdf4;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --orange: #ea580c;
+      --orange-light: #fff7ed;
+      --yellow: #ca8a04;
+      --yellow-light: #fefce8;
+      --radius: 10px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.12);
+      --sidebar-w: 220px;
+      --header-h: 56px;
+      --transition: .18s ease;
+    }
+    html { font-size: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; font-size: 13px; border: none; }
+    input, select, textarea { font-family: inherit; font-size: 13px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 9px 12px; }
+    thead th { background: var(--bg); font-weight: 600; font-size: 12px;
+                text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+                border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg); }
+
+    /* ── LAYOUT ── */
+    #app { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    #sidebar {
+      width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 18px 20px 16px; font-size: 16px; font-weight: 700; color: var(--primary);
+      border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+    }
+    .sidebar-logo span { font-size: 20px; }
+    .sidebar-nav { padding: 12px 0; flex: 1; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+      color: var(--text-muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all var(--transition); border-radius: 0;
+      position: relative;
+    }
+    .nav-item:hover { color: var(--text); background: var(--bg); }
+    .nav-item.active { color: var(--primary); background: var(--primary-light); font-weight: 600; }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+    .sidebar-footer small { color: var(--text-muted); font-size: 11px; }
+
+    /* MAIN */
+    #main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    #topbar {
+      height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; position: sticky; top: 0; z-index: 50;
+    }
+    #topbar-title { font-size: 16px; font-weight: 700; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    #content { padding: 24px; flex: 1; }
+
+    /* SECTION */
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-header { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .section-title { font-size: 20px; font-weight: 700; }
+    .section-subtitle { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+
+    /* CARDS KPI */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .kpi-card {
+      background: var(--surface); border-radius: var(--radius); padding: 16px 18px;
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+    }
+    .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+                 color: var(--text-muted); margin-bottom: 8px; }
+    .kpi-value { font-size: 22px; font-weight: 700; line-height: 1; }
+    .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+    .kpi-card.green .kpi-value { color: var(--green); }
+    .kpi-card.red .kpi-value { color: var(--red); }
+    .kpi-card.blue .kpi-value { color: var(--primary); }
+    .kpi-card.orange .kpi-value { color: var(--orange); }
+
+    /* PROGRESS BAR */
+    .progress-container { background: var(--surface); border-radius: var(--radius); padding: 18px 20px;
+                           border: 1px solid var(--border); margin-bottom: 24px; }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .progress-label { font-size: 13px; font-weight: 600; }
+    .progress-pct { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .progress-bar-bg { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #60a5fa);
+                          border-radius: 99px; transition: width .5s ease; }
+    .progress-bar-fill.green { background: linear-gradient(90deg, var(--green), #4ade80); }
+
+    /* CHARTS */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .chart-card { background: var(--surface); border-radius: var(--radius); padding: 18px;
+                   border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-muted); }
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* TABLE CARD */
+    .table-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+                   box-shadow: var(--shadow); overflow: hidden; }
+    .table-toolbar { padding: 12px 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+                      border-bottom: 1px solid var(--border); }
+    .table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+    .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); }
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+            border-radius: 7px; font-weight: 600; font-size: 13px; transition: all var(--transition); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-ghost { background: transparent; color: var(--text-muted); padding: 6px 8px; }
+    .btn-ghost:hover { color: var(--text); background: var(--bg); border-radius: 6px; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+    .btn-icon { padding: 6px; border-radius: 6px; background: transparent; color: var(--text-muted); }
+    .btn-icon:hover { background: var(--bg); color: var(--text); }
+
+    /* INPUTS */
+    .input, .select, .textarea {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      padding: 7px 11px; color: var(--text); width: 100%;
+      transition: border-color var(--transition);
+    }
+    .input:focus, .select:focus, .textarea:focus {
+      outline: none; border-color: var(--primary); background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .search-input { width: 220px; }
+
+    /* BADGES / STATUS */
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+    .badge-stock    { background: var(--primary-light); color: var(--primary); }
+    .badge-online   { background: var(--green-light);   color: var(--green); }
+    .badge-reserved { background: var(--yellow-light);  color: var(--yellow); }
+    .badge-sold     { background: #f3f4f6; color: #374151; }
+    .badge-unsold   { background: var(--red-light);     color: var(--red); }
+    .badge-returned { background: var(--orange-light);  color: var(--orange); }
+
+    .profit-pos { color: var(--green); font-weight: 600; }
+    .profit-neg { color: var(--red);   font-weight: 600; }
+    .profit-neu { color: var(--text-muted); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      opacity: 0; pointer-events: none; transition: opacity var(--transition);
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border-radius: 12px; width: 100%; max-width: 700px;
+      max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow-md);
+      transform: translateY(20px); transition: transform var(--transition);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { padding: 18px 22px 0; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-body { padding: 18px 22px; }
+    .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border);
+                     display: flex; justify-content: flex-end; gap: 10px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .form-section { margin: 18px 0 10px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+                     letter-spacing: .06em; color: var(--text-muted); border-bottom: 1px solid var(--border);
+                     padding-bottom: 6px; }
+
+    /* ALERT */
+    .alert { padding: 10px 14px; border-radius: 7px; font-size: 12px; margin-bottom: 12px; display: flex; gap: 8px; }
+    .alert-warning { background: var(--orange-light); color: var(--orange); border: 1px solid #fed7aa; }
+    .alert-danger  { background: var(--red-light);    color: var(--red);    border: 1px solid #fecaca; }
+    .alert-info    { background: var(--primary-light); color: var(--primary); border: 1px solid #bfdbfe; }
+
+    /* ANALYSIS CARDS */
+    .analysis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .analysis-card { background: var(--surface); border-radius: var(--radius); padding: 18px;
+                      border: 1px solid var(--border); }
+    .analysis-card-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; display: flex; gap: 8px; align-items: center; }
+    .analysis-row { display: flex; justify-content: space-between; align-items: center;
+                     padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .analysis-row:last-child { border-bottom: none; }
+    .analysis-name { font-weight: 500; }
+    .analysis-val  { font-weight: 700; }
+
+    /* STOCK ALERTS */
+    .stock-alert-list { display: flex; flex-direction: column; gap: 8px; }
+    .stock-alert-item { display: flex; align-items: center; justify-content: space-between;
+                         padding: 10px 14px; background: var(--red-light); border-radius: 7px;
+                         border: 1px solid #fecaca; font-size: 12px; }
+    .stock-alert-item.warn { background: var(--orange-light); border-color: #fed7aa; }
+
+    /* MONTHLY TABLE */
+    .monthly-comparison { display: flex; gap: 10px; align-items: center; font-size: 12px; }
+    .trend-up   { color: var(--green); }
+    .trend-down { color: var(--red); }
+    .trend-flat { color: var(--text-muted); }
+
+    /* TOAST */
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+                         display: flex; flex-direction: column; gap: 8px; }
+    .toast { background: var(--text); color: #fff; padding: 10px 16px; border-radius: 8px;
+              font-size: 13px; max-width: 320px; box-shadow: var(--shadow-md);
+              animation: slideIn .25s ease; }
+    .toast.success { background: var(--green); }
+    .toast.error   { background: var(--red); }
+    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    /* CONFIRM DIALOG */
+    #confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity var(--transition);
+    }
+    #confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-box { background: var(--surface); border-radius: 12px; padding: 24px; max-width: 380px;
+                    width: 100%; box-shadow: var(--shadow-md); text-align: center; }
+    .confirm-box h3 { margin-bottom: 8px; }
+    .confirm-box p  { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); transition: transform var(--transition); }
+      #sidebar.open { transform: none; }
+      #main { margin-left: 0; }
+      .form-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .search-input { width: 140px; }
+      #content { padding: 14px; }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* MENU TOGGLE */
+    #menu-toggle { display: none; }
+    @media (max-width: 768px) { #menu-toggle { display: flex; } }
+
+    /* OVERLAY SIDEBAR MOBILE */
+    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 99; }
+    #sidebar-overlay.open { display: block; }
+
+    /* PHOTO */
+    .product-photo { width: 36px; height: 36px; border-radius: 6px; object-fit: cover;
+                      background: var(--bg); border: 1px solid var(--border); }
+    .photo-placeholder { width: 36px; height: 36px; border-radius: 6px; background: var(--bg);
+                          border: 1px solid var(--border); display: flex; align-items: center;
+                          justify-content: center; font-size: 16px; color: var(--text-muted); }
+
+    /* IMPORT/EXPORT */
+    .io-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .io-card { background: var(--surface); border-radius: var(--radius); padding: 20px;
+                border: 1px solid var(--border); text-align: center; }
+    .io-card .io-icon { font-size: 32px; margin-bottom: 10px; }
+    .io-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .io-card p  { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+
+    /* MONTH SELECTOR */
+    .month-nav { display: flex; align-items: center; gap: 10px; }
+    .month-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+                          padding: 6px 10px; font-size: 13px; font-weight: 600; }
+    .month-nav button:hover { background: var(--border); }
+    #month-label { font-size: 14px; font-weight: 700; min-width: 120px; text-align: center; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    /* Action cell */
+    .action-cell { display: flex; gap: 4px; }
+    .td-photo { width: 48px; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+
+<!-- ── CONFIRM DIALOG ── -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Confirmer</h3>
+    <p id="confirm-msg"></p>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" onclick="closeConfirm()">Annuler</button>
+      <button class="btn btn-danger"    id="confirm-ok-btn">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SIDEBAR OVERLAY MOBILE ── -->
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- ── MAIN LAYOUT ── -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-logo"><span>👗</span> Vinted Pro</div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-section="dashboard"><span class="nav-icon">📊</span> Tableau de bord</div>
+      <div class="nav-item" data-section="products"><span class="nav-icon">🏷️</span> Produits</div>
+      <div class="nav-item" data-section="monthly"><span class="nav-icon">📅</span> Suivi mensuel</div>
+      <div class="nav-item" data-section="analysis"><span class="nav-icon">🔍</span> Analyse</div>
+      <div class="nav-item" data-section="stock"><span class="nav-icon">📦</span> Stock</div>
+      <div class="nav-item" data-section="io"><span class="nav-icon">💾</span> Import / Export</div>
+    </nav>
+    <div class="sidebar-footer">
+      <small>Vinted Dashboard v1.0<br>Données stockées localement</small>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div id="main">
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="menu-toggle" class="btn-icon" onclick="toggleSidebar()">☰</button>
+        <span id="topbar-title">Tableau de bord</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ Ajouter un produit</button>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main id="content">
+
+      <!-- ═══════════════════════════════════════
+           SECTION DASHBOARD
+      ═══════════════════════════════════════ -->
+      <section id="s-dashboard" class="section active">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Tableau de bord</div>
+            <div class="section-subtitle">Vue globale de votre activité Vinted</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <select class="select" id="db-period" style="width:auto;" onchange="renderDashboard()">
+              <option value="all">Toute la période</option>
+              <option value="month">Ce mois</option>
+              <option value="last30">30 derniers jours</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI GRID -->
+        <div class="kpi-grid" id="kpi-grid"><!-- JS --></div>
+
+        <!-- OBJECTIF MENSUEL -->
+        <div class="progress-container" id="goal-progress"><!-- JS --></div>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Bénéfice net des 6 derniers mois</div>
+            <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Répartition par catégorie</div>
+            <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Statut des articles</div>
+            <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">CA vs Coûts (6 mois)</div>
+            <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
+          </div>
+        </div>
+
+        <!-- RECENT SALES -->
+        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Dernières ventes</div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table id="recent-sales-table"><tbody id="recent-sales-body"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════
+           SECTION PRODUITS
+      ═══════════════════════════════════════ -->
+      <section id="s-products" class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Produits</div>
+            <div class="section-subtitle">Gérez l'ensemble de votre catalogue</div>
+          </div>
+          <button class="btn btn-primary" onclick="openProductModal()">+ Ajouter un produit</button>
+        </div>
+
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input class="input search-input" id="prod-search" placeholder="🔍 Nom, marque…" oninput="renderProducts()">
+            <select class="select" id="prod-filter-cat" style="width:auto;" onchange="renderProducts()">
+              <option value="">Toutes catégories</option>
+              <option>chemise</option><option>t-shirt</option><option>veste</option>
+              <option>pantalon</option><option>short</option><option>chaussures</option>
+              <option>accessoire</option><option>autre</option>
+            </select>
+            <select class="select" id="prod-filter-status" style="width:auto;" onchange="renderProducts()">
+              <option value="">Tous statuts</option>
+              <option value="stock">En stock</option>
+              <option value="online">En ligne</option>
+              <option value="reserved">Réservé</option>
+              <option value="sold">Vendu</option>
+              <option value="unsold">Invendu</option>
+              <option value="returned">Retourné</option>
+            </select>
+            <select class="select" id="prod-sort" style="width:auto;" onchange="renderProducts()">
+              <option value="date_desc">Date achat ↓</option>
+              <option value="date_asc">Date achat ↑</option>
+              <option value="profit_desc">Bénéfice ↓</option>
+              <option value="margin_desc">Marge ↓</option>
+              <option value="name_asc">Nom A-Z</option>
+            </select>
+            <span id="prod-count" style="margin-left:auto;color:var(--text-muted);font-size:12px;"></span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th class="td-photo"></th>
+                  <th>Nom</th>
+                  <th>Catégorie</th>
+                  <th>Marque</th>
+                  <th>Taille</th>
+                  <th>Statut</th>
+                  <th class="num">Achat</th>
+                  <th class="num">Vente</th>
+                  <th class="num">Bénéfice</th>
+                  <th class="num">Marge</th>
+                  <th class="num">ROI</th>
+                  <th>Durée</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="products-body"></tbody>
+            </table>
+          </div>
+          <div id="products-empty" class="empty-state" style="display:none;">
+            <div class="empty-icon">🏷️</div>
+            <p>Aucun produit trouvé.<br>Ajoutez votre premier article ou modifiez les filtres.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════
+           SECTION MENSUEL
+      ═══════════════════════════════════════ -->
+      <section id="s-monthly" class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Suivi mensuel</div>
+            <div class="section-subtitle">Performance mois par mois</div>
+          </div>
+          <div class="month-nav">
+            <button onclick="changeMonth(-1)">←</button>
+            <span id="month-label"></span>
+            <button onclick="changeMonth(1)">→</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="monthly-kpi"><!-- JS --></div>
+        <div class="progress-container" id="monthly-goal"><!-- JS --></div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Bénéfice net quotidien du mois</div>
+            <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Mix catégories vendues ce mois</div>
+            <div class="chart-wrap"><canvas id="chart-monthly-cat"></canvas></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Articles vendus ce mois</div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <thead><tr>
+                <th>Nom</th><th>Catégorie</th><th>Marque</th>
+                <th class="num">Achat</th><th class="num">Vendu</th>
+                <th class="num">Bénéfice</th><th class="num">Marge</th><th>Date vente</th>
+              </tr></thead>
+              <tbody id="monthly-sold-body"></tbody>
+            </table>
+          </div>
+          <div id="monthly-empty" class="empty-state" style="display:none;">
+            <div class="empty-icon">📅</div>
+            <p>Aucune vente enregistrée pour ce mois.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════
+           SECTION ANALYSE
+      ═══════════════════════════════════════ -->
+      <section id="s-analysis" class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Analyse business</div>
+            <div class="section-subtitle">Insights automatiques pour optimiser votre activité</div>
+          </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div id="analysis-alerts"></div>
+
+        <div class="analysis-grid" id="analysis-grid"><!-- JS --></div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Bénéfice net par catégorie</div>
+            <div class="chart-wrap"><canvas id="chart-profit-cat"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Marge moyenne par marque (Top 8)</div>
+            <div class="chart-wrap"><canvas id="chart-margin-brand"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════
+           SECTION STOCK
+      ═══════════════════════════════════════ -->
+      <section id="s-stock" class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Gestion du stock</div>
+            <div class="section-subtitle">Articles disponibles et alertes</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="stock-kpi"><!-- JS --></div>
+
+        <!-- STOCK ALERTS -->
+        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">⚠️ Alertes stock dormant</div>
+        <div id="stock-alerts" style="margin-bottom:20px;"></div>
+
+        <!-- PAR CATEGORIE -->
+        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Articles par catégorie</div>
+        <div class="charts-grid" style="margin-bottom:20px;">
+          <div class="chart-card">
+            <div class="chart-title">Répartition du stock</div>
+            <div class="chart-wrap"><canvas id="chart-stock-cat"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Valeur estimée par catégorie</div>
+            <div class="chart-wrap"><canvas id="chart-stock-val"></canvas></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Articles en stock / en ligne</div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <select class="select" id="stock-filter" style="width:auto;" onchange="renderStock()">
+              <option value="">Tout le stock</option>
+              <option value="30">Depuis + de 30 jours</option>
+              <option value="60">Depuis + de 60 jours</option>
+              <option value="90">Depuis + de 90 jours</option>
+            </select>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr>
+                <th>Nom</th><th>Catégorie</th><th>Marque</th><th>Statut</th>
+                <th class="num">Prix achat</th><th class="num">Prix vente</th>
+                <th>En stock depuis</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="stock-body"></tbody>
+            </table>
+          </div>
+          <div id="stock-empty" class="empty-state" style="display:none;">
+            <div class="empty-icon">📦</div><p>Aucun article en stock.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════
+           SECTION IMPORT / EXPORT
+      ═══════════════════════════════════════ -->
+      <section id="s-io" class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Import / Export</div>
+            <div class="section-subtitle">Sauvegardez et restaurez vos données</div>
+          </div>
+        </div>
+
+        <div class="alert alert-info" style="margin-bottom:20px;">
+          ℹ️ Toutes les données sont stockées localement dans votre navigateur (localStorage).
+          Exportez régulièrement vos données pour éviter toute perte.
+        </div>
+
+        <div class="io-grid">
+          <div class="io-card">
+            <div class="io-icon">📤</div>
+            <h3>Exporter JSON</h3>
+            <p>Sauvegarde complète de toutes vos données dans un fichier JSON.</p>
+            <button class="btn btn-primary" onclick="exportJSON()">Exporter JSON</button>
+          </div>
+          <div class="io-card">
+            <div class="io-icon">📥</div>
+            <h3>Importer JSON</h3>
+            <p>Restaurez vos données depuis un fichier JSON exporté précédemment.</p>
+            <input type="file" id="import-json-file" accept=".json" style="display:none;" onchange="importJSON(this)">
+            <button class="btn btn-secondary" onclick="document.getElementById('import-json-file').click()">Importer JSON</button>
+          </div>
+          <div class="io-card">
+            <div class="io-icon">📊</div>
+            <h3>Exporter CSV</h3>
+            <p>Exportez votre liste de produits au format CSV (compatible Excel).</p>
+            <button class="btn btn-success" onclick="exportCSV()">Exporter CSV</button>
+          </div>
+          <div class="io-card">
+            <div class="io-icon">📋</div>
+            <h3>Importer CSV</h3>
+            <p>Importez des produits depuis un fichier CSV. <a href="#" onclick="downloadCSVTemplate();return false;" style="color:var(--primary);">Télécharger le modèle</a></p>
+            <input type="file" id="import-csv-file" accept=".csv" style="display:none;" onchange="importCSV(this)">
+            <button class="btn btn-secondary" onclick="document.getElementById('import-csv-file').click()">Importer CSV</button>
+          </div>
+          <div class="io-card">
+            <div class="io-icon">🎯</div>
+            <h3>Objectif mensuel</h3>
+            <p>Définissez votre objectif de bénéfice mensuel.</p>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+              <input class="input" type="number" id="goal-input" placeholder="1000" style="width:100px;">
+              <span>€</span>
+              <button class="btn btn-primary btn-sm" onclick="saveGoal()">Sauver</button>
+            </div>
+          </div>
+          <div class="io-card">
+            <div class="io-icon">🗑️</div>
+            <h3>Réinitialiser</h3>
+            <p>Supprime toutes les données. Action irréversible.</p>
+            <button class="btn btn-danger" onclick="confirmReset()">Réinitialiser tout</button>
+          </div>
+        </div>
+
+        <!-- CSV FORMAT GUIDE -->
+        <div style="margin-top:24px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Format CSV attendu</div>
+          <div class="table-card">
+            <div class="table-scroll" style="font-size:11px;padding:12px 16px;font-family:monospace;color:var(--text-muted);max-height:160px;">
+              nom,categorie,marque,taille,prixAchat,fraisAchat,prixVente,prixVendu,fraisVinted,fraisEmballage,fraisLivraison,dateAchat,dateMiseEnLigne,dateVente,statut,canal,commentaire<br>
+              "Chemise Oxford","chemise","Ralph Lauren","M","3","0.5","14","14","1.2","0.3","0","2024-01-15","2024-01-16","2024-01-20","sold","brocante","Belle chemise"
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── TOAST CONTAINER ── -->
+<div id="toast-container"></div>
+
+<!-- ── PRODUCT MODAL ── -->
+<div class="modal-overlay" id="product-modal-overlay" onclick="maybeCloseModal(event)">
+  <div class="modal" id="product-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Ajouter un produit</div>
+      <button class="btn-icon" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="f-id">
+      <div class="form-section">Informations générales</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nom du produit *</label>
+          <input class="input" id="f-name" placeholder="Ex : Chemise Oxford bleue">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catégorie *</label>
+          <select class="select" id="f-category">
+            <option value="">— Choisir —</option>
+            <option>chemise</option><option>t-shirt</option><option>veste</option>
+            <option>pantalon</option><option>short</option><option>chaussures</option>
+            <option>accessoire</option><option>autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marque</label>
+          <input class="input" id="f-brand" placeholder="Ex : Zara, H&M…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Taille</label>
+          <input class="input" id="f-size" placeholder="Ex : M, 40, 42…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Statut *</label>
+          <select class="select" id="f-status">
+            <option value="stock">En stock</option>
+            <option value="online">En ligne</option>
+            <option value="reserved">Réservé</option>
+            <option value="sold">Vendu</option>
+            <option value="unsold">Invendu</option>
+            <option value="returned">Retourné</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Canal d'achat</label>
+          <select class="select" id="f-channel">
+            <option value="">— Choisir —</option>
+            <option value="brocante">Brocante</option>
+            <option value="friperie">Friperie</option>
+            <option value="lot">Lot</option>
+            <option value="particulier">Particulier</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section">Prix & Frais</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Prix d'achat (€) *</label>
+          <input class="input" type="number" step="0.01" id="f-purchasePrice" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frais d'achat (€)</label>
+          <input class="input" type="number" step="0.01" id="f-purchaseFees" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prix de mise en vente (€)</label>
+          <input class="input" type="number" step="0.01" id="f-listingPrice" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prix vendu (€)</label>
+          <input class="input" type="number" step="0.01" id="f-soldPrice" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frais Vinted (€)</label>
+          <input class="input" type="number" step="0.01" id="f-vintedFees" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frais d'emballage (€)</label>
+          <input class="input" type="number" step="0.01" id="f-packagingFees" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frais livraison à ma charge (€)</label>
+          <input class="input" type="number" step="0.01" id="f-shippingFees" placeholder="0.00">
+        </div>
+      </div>
+
+      <!-- Aperçu calcul -->
+      <div id="calc-preview" style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:4px;font-size:12px;display:none;">
+        <div style="font-weight:700;margin-bottom:6px;">Aperçu rentabilité</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <span>Coût total :</span><span id="prev-cost" style="font-weight:600;"></span>
+          <span>Bénéfice net :</span><span id="prev-profit" style="font-weight:700;"></span>
+          <span>Marge nette :</span><span id="prev-margin"></span>
+          <span>ROI :</span><span id="prev-roi"></span>
+        </div>
+      </div>
+
+      <div class="form-section">Dates</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Date d'achat</label>
+          <input class="input" type="date" id="f-purchaseDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date de mise en ligne</label>
+          <input class="input" type="date" id="f-listingDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date de vente</label>
+          <input class="input" type="date" id="f-saleDate">
+        </div>
+      </div>
+
+      <div class="form-section">Photo & Notes</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">URL de la photo</label>
+          <input class="input" id="f-photo" placeholder="https://...">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Commentaire</label>
+          <textarea class="textarea" id="f-comment" rows="2" placeholder="Notes internes…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeProductModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── CONSTANTS ──────────────────────────────────────────────
+const LS_PRODUCTS = 'vinted_products';
+const LS_SETTINGS = 'vinted_settings';
+const MONTHLY_GOAL_DEFAULT = 1000;
+
+const STATUS_LABELS = {
+  stock: 'En stock', online: 'En ligne', reserved: 'Réservé',
+  sold: 'Vendu', unsold: 'Invendu', returned: 'Retourné'
+};
+const CHANNEL_LABELS = {
+  brocante: 'Brocante', friperie: 'Friperie', lot: 'Lot',
+  particulier: 'Particulier', autre: 'Autre'
+};
+
+// ── STATE ──────────────────────────────────────────────────
+let products = [];
+let settings = { monthlyGoal: MONTHLY_GOAL_DEFAULT };
+let currentMonth = new Date();   // For monthly view
+let charts = {};                  // Chart.js instances
+
+// ── UTILS ─────────────────────────────────────────────────
+const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const fmt  = v => v == null || isNaN(v) ? '—' : v.toFixed(2) + ' €';
+const fmtP = v => v == null || isNaN(v) ? '—' : v.toFixed(1) + ' %';
+const n    = v => parseFloat(v) || 0;
+
+function daysBetween(d1, d2) {
+  if (!d1 || !d2) return null;
+  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
+}
+function daysAgo(dateStr) {
+  if (!dateStr) return null;
+  return Math.round((Date.now() - new Date(dateStr)) / 86400000);
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function monthKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function profitClass(v) {
+  if (v == null || isNaN(v)) return 'profit-neu';
+  return v > 0 ? 'profit-pos' : v < 0 ? 'profit-neg' : 'profit-neu';
+}
+
+// ── CALCULATIONS ───────────────────────────────────────────
+function calcProduct(p) {
+  const cost   = n(p.purchasePrice) + n(p.purchaseFees) + n(p.packagingFees) + n(p.shippingFees);
+  const isSold = p.status === 'sold' && n(p.soldPrice) > 0;
+  const profit = isSold ? n(p.soldPrice) - cost - n(p.vintedFees) : null;
+  const margin = (isSold && n(p.soldPrice) > 0) ? profit / n(p.soldPrice) * 100 : null;
+  const roi    = (isSold && cost > 0)           ? profit / cost * 100           : null;
+  const duration = daysBetween(p.listingDate, p.saleDate);
+  return { cost, profit, margin, roi, duration };
+}
+
+// ── LOAD / SAVE ────────────────────────────────────────────
+function load() {
+  try { products = JSON.parse(localStorage.getItem(LS_PRODUCTS)) || []; } catch { products = []; }
+  try { settings = { ...settings, ...JSON.parse(localStorage.getItem(LS_SETTINGS)) }; } catch {}
+}
+function save() {
+  localStorage.setItem(LS_PRODUCTS, JSON.stringify(products));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+}
+
+// ── SAMPLE DATA ────────────────────────────────────────────
+function loadSampleData() {
+  const today = new Date();
+  const d = (offset) => {
+    const dt = new Date(today);
+    dt.setDate(dt.getDate() - offset);
+    return dt.toISOString().slice(0,10);
+  };
+  products = [
+    {
+      id: uid(), name: 'Chemise Oxford bleue', category: 'chemise', brand: 'Ralph Lauren',
+      size: 'M', purchasePrice: 3, purchaseFees: 0.5, listingPrice: 14, soldPrice: 14,
+      vintedFees: 1.2, packagingFees: 0.3, shippingFees: 0,
+      purchaseDate: d(40), listingDate: d(38), saleDate: d(32), status: 'sold',
+      channel: 'brocante', comment: 'Belle chemise, vendue rapidement', photo: ''
+    },
+    {
+      id: uid(), name: 'T-shirt Nike blanc', category: 't-shirt', brand: 'Nike',
+      size: 'L', purchasePrice: 2, purchaseFees: 0, listingPrice: 10, soldPrice: 10,
+      vintedFees: 0.8, packagingFees: 0.2, shippingFees: 0,
+      purchaseDate: d(35), listingDate: d(33), saleDate: d(25), status: 'sold',
+      channel: 'friperie', comment: '', photo: ''
+    },
+    {
+      id: uid(), name: 'Veste en cuir noir', category: 'veste', brand: 'Zara',
+      size: 'S', purchasePrice: 8, purchaseFees: 0, listingPrice: 28, soldPrice: 28,
+      vintedFees: 2.5, packagingFees: 0.5, shippingFees: 0,
+      purchaseDate: d(60), listingDate: d(58), saleDate: d(15), status: 'sold',
+      channel: 'brocante', comment: 'Super article, bonne marge', photo: ''
+    },
+    {
+      id: uid(), name: 'Short Levi\'s beige', category: 'short', brand: 'Levi\'s',
+      size: '38', purchasePrice: 4, purchaseFees: 0.5, listingPrice: 12, soldPrice: 0,
+      vintedFees: 0, packagingFees: 0, shippingFees: 0,
+      purchaseDate: d(25), listingDate: '', saleDate: '', status: 'stock',
+      channel: 'lot', comment: 'Acheté dans un lot de 5 pièces', photo: ''
+    },
+    {
+      id: uid(), name: 'Chemise à carreaux', category: 'chemise', brand: 'H&M',
+      size: 'XL', purchasePrice: 5, purchaseFees: 0, listingPrice: 18, soldPrice: 0,
+      vintedFees: 0, packagingFees: 0, shippingFees: 0,
+      purchaseDate: d(18), listingDate: d(16), saleDate: '', status: 'online',
+      channel: 'particulier', comment: 'En attente d\'acheteur', photo: ''
+    }
+  ];
+  save();
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const s = item.dataset.section;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById(`s-${s}`).classList.add('active');
+    document.getElementById('topbar-title').textContent = item.textContent.trim();
+    closeSidebar();
+    renderSection(s);
+  });
+});
+
+function renderSection(s) {
+  if (s === 'dashboard') renderDashboard();
+  else if (s === 'products') renderProducts();
+  else if (s === 'monthly')  renderMonthly();
+  else if (s === 'analysis') renderAnalysis();
+  else if (s === 'stock')    renderStock();
+  else if (s === 'io')       renderIO();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+// ── CHARTS HELPERS ─────────────────────────────────────────
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+function createChart(id, config) {
+  destroyChart(id);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, config);
+}
+
+const COLORS = ['#2563eb','#16a34a','#dc2626','#ea580c','#ca8a04','#7c3aed','#0891b2','#db2777'];
+const ALPHA  = c => c + '33';
+
+// ── DASHBOARD ──────────────────────────────────────────────
+function renderDashboard() {
+  const period   = document.getElementById('db-period').value;
+  const filtered = filterByPeriod(products, period);
+  const sold     = filtered.filter(p => p.status === 'sold');
+  const stock    = products.filter(p => ['stock','online','reserved'].includes(p.status));
+
+  const ca        = sold.reduce((s,p) => s + n(p.soldPrice), 0);
+  const totalCost = sold.reduce((s,p) => s + calcProduct(p).cost, 0);
+  const netProfit = sold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
+  const invested  = products.reduce((s,p) => s + n(p.purchasePrice) + n(p.purchaseFees), 0);
+  const avgMargin = sold.length
+    ? sold.reduce((s,p) => s + (calcProduct(p).margin ?? 0), 0) / sold.length : 0;
+  const avgBasket = sold.length ? ca / sold.length : 0;
+  const avgProfit = sold.length ? netProfit / sold.length : 0;
+  const roiGlobal = totalCost > 0 ? netProfit / totalCost * 100 : 0;
+  const stockVal  = stock.reduce((s,p) => s + n(p.listingPrice || p.purchasePrice), 0);
+
+  const kpis = [
+    { label: "Chiffre d'affaires", value: fmt(ca), sub: `${sold.length} vente${sold.length>1?'s':''}`, cls: 'blue' },
+    { label: "Bénéfice net", value: fmt(netProfit), sub: '', cls: netProfit >= 0 ? 'green' : 'red' },
+    { label: "Marge moyenne", value: fmtP(avgMargin), sub: '', cls: avgMargin >= 20 ? 'green' : '' },
+    { label: "ROI global", value: fmtP(roiGlobal), sub: '', cls: roiGlobal >= 50 ? 'green' : '' },
+    { label: "Articles vendus", value: sold.length, sub: period === 'all' ? 'total' : '' },
+    { label: "Articles en stock", value: stock.length, sub: `val. ~${fmt(stockVal)}`, cls: '' },
+    { label: "Montant investi", value: fmt(invested), sub: 'tous achats' },
+    { label: "Panier moyen", value: fmt(avgBasket), sub: '' },
+    { label: "Bénéf. moyen/vente", value: fmt(avgProfit), sub: '', cls: avgProfit >= 5 ? 'green' : '' },
+    { label: "Valeur stock estimée", value: fmt(stockVal), sub: 'au prix de vente' },
+  ];
+
+  document.getElementById('kpi-grid').innerHTML = kpis.map(k =>
+    `<div class="kpi-card ${k.cls||''}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ''}
+    </div>`
+  ).join('');
+
+  // Goal progress (current month)
+  const thisMonthSold = products.filter(p => p.status === 'sold' && p.saleDate &&
+    p.saleDate.startsWith(monthKey(new Date())));
+  const monthProfit = thisMonthSold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
+  const goal    = settings.monthlyGoal;
+  const pct     = Math.min(100, (monthProfit / goal * 100));
+  const pctDisp = pct.toFixed(1);
+  document.getElementById('goal-progress').innerHTML = `
+    <div class="progress-header">
+      <span class="progress-label">🎯 Objectif mensuel — ${fmt(goal)}</span>
+      <span class="progress-pct">${fmt(monthProfit)} / ${fmt(goal)} (${pctDisp} %)</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill ${pct >= 100 ? 'green' : ''}" style="width:${pct}%"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+      ${pct >= 100 ? '🎉 Objectif atteint !' : `Il reste ${fmt(goal - monthProfit)} à réaliser ce mois-ci.`}
+    </div>`;
+
+  // Charts
+  renderMonthlyChart();
+  renderCategoryChart();
+  renderStatusChart();
+  renderRevenueChart();
+  renderRecentSales();
+}
+
+function filterByPeriod(arr, period) {
+  if (period === 'month') {
+    const mk = monthKey(new Date());
+    return arr.filter(p => p.saleDate && p.saleDate.startsWith(mk));
+  }
+  if (period === 'last30') {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    return arr.filter(p => p.saleDate && new Date(p.saleDate) >= cutoff);
+  }
+  return arr;
+}
+
+function getLast6Months() {
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+    months.push(monthKey(d));
+  }
+  return months;
+}
+
+function renderMonthlyChart() {
+  const months = getLast6Months();
+  const profits = months.map(mk => {
+    const sold = products.filter(p => p.status === 'sold' && p.saleDate && p.saleDate.startsWith(mk));
+    return sold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
+  });
+  const labels = months.map(mk => {
+    const [y,m] = mk.split('-');
+    return new Date(y, m-1).toLocaleDateString('fr-FR', { month:'short', year:'2-digit' });
+  });
+  createChart('chart-monthly', {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Bénéfice net (€)', data: profits,
+      backgroundColor: profits.map(v => v >= 0 ? '#16a34a88' : '#dc262688'),
+      borderColor: profits.map(v => v >= 0 ? '#16a34a' : '#dc2626'),
+      borderWidth: 1.5, borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => v + '€' }, grid: { color: '#e2e4e9' } },
+                x: { grid: { display: false } } } }
+  });
+}
+
+function renderCategoryChart() {
+  const cats = {};
+  products.filter(p => p.status === 'sold').forEach(p => {
+    cats[p.category || 'autre'] = (cats[p.category || 'autre'] || 0) + 1;
+  });
+  const labels = Object.keys(cats);
+  const data   = Object.values(cats);
+  createChart('chart-category', {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
+      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+  });
+}
+
+function renderStatusChart() {
+  const counts = {};
+  products.forEach(p => { counts[p.status] = (counts[p.status] || 0) + 1; });
+  const labels = Object.keys(counts).map(k => STATUS_LABELS[k] || k);
+  createChart('chart-status', {
+    type: 'pie',
+    data: { labels, datasets: [{ data: Object.values(counts),
+      backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+  });
+}
+
+function renderRevenueChart() {
+  const months = getLast6Months();
+  const ca    = months.map(mk => products.filter(p=>p.status==='sold'&&p.saleDate?.startsWith(mk))
+                                          .reduce((s,p)=>s+n(p.soldPrice),0));
+  const costs = months.map(mk => products.filter(p=>p.status==='sold'&&p.saleDate?.startsWith(mk))
+                                          .reduce((s,p)=>s+calcProduct(p).cost+n(p.vintedFees),0));
+  const labels = months.map(mk => {
+    const [y,m] = mk.split('-');
+    return new Date(y,m-1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});
+  });
+  createChart('chart-revenue', {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'CA (€)', data: ca, borderColor: '#2563eb', backgroundColor: '#2563eb22',
+        fill: true, tension: .3, pointRadius: 4 },
+      { label: 'Coûts (€)', data: costs, borderColor: '#dc2626', backgroundColor: '#dc262622',
+        fill: true, tension: .3, pointRadius: 4 }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: { y: { ticks: { callback: v => v+'€' } } } }
+  });
+}
+
+function renderRecentSales() {
+  const sold = products.filter(p => p.status === 'sold' && p.saleDate)
+    .sort((a,b) => new Date(b.saleDate) - new Date(a.saleDate)).slice(0, 8);
+  const tbody = document.getElementById('recent-sales-body');
+  if (!sold.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-icon">📦</div><p>Aucune vente enregistrée.</p></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sold.map(p => {
+    const c = calcProduct(p);
+    return `<tr>
+      <td>${photoCell(p)}</td>
+      <td><b>${esc(p.name)}</b></td>
+      <td>${esc(p.brand||'—')}</td>
+      <td class="num">${fmt(n(p.soldPrice))}</td>
+      <td class="num ${profitClass(c.profit)}">${c.profit != null ? fmt(c.profit) : '—'}</td>
+      <td class="num">${c.margin != null ? fmtP(c.margin) : '—'}</td>
+      <td>${fmtDate(p.saleDate)}</td>
+    </tr>`;
+  }).join('');
+  const thead = `<thead><tr>
+    <th class="td-photo"></th><th>Nom</th><th>Marque</th>
+    <th class="num">Prix vendu</th><th class="num">Bénéfice</th>
+    <th class="num">Marge</th><th>Date</th>
+  </tr></thead>`;
+  document.querySelector('#recent-sales-table').innerHTML = thead + `<tbody>${tbody.innerHTML}</tbody>`;
+}
+
+// ── PRODUCTS ──────────────────────────────────────────────
+function renderProducts() {
+  const search = document.getElementById('prod-search').value.toLowerCase();
+  const cat    = document.getElementById('prod-filter-cat').value;
+  const status = document.getElementById('prod-filter-status').value;
+  const sort   = document.getElementById('prod-sort').value;
+
+  let list = products.filter(p => {
+    if (cat    && p.category !== cat) return false;
+    if (status && p.status   !== status) return false;
+    if (search && !( (p.name||'').toLowerCase().includes(search) ||
+                     (p.brand||'').toLowerCase().includes(search))) return false;
+    return true;
+  });
+
+  list = list.slice().sort((a,b) => {
+    if (sort === 'date_desc') return (b.purchaseDate||'') > (a.purchaseDate||'') ? 1 : -1;
+    if (sort === 'date_asc')  return (a.purchaseDate||'') > (b.purchaseDate||'') ? 1 : -1;
+    if (sort === 'profit_desc') return (calcProduct(b).profit??-999) - (calcProduct(a).profit??-999);
+    if (sort === 'margin_desc') return (calcProduct(b).margin??-999) - (calcProduct(a).margin??-999);
+    if (sort === 'name_asc')  return (a.name||'').localeCompare(b.name||'');
+    return 0;
+  });
+
+  document.getElementById('prod-count').textContent = `${list.length} article${list.length !== 1 ? 's' : ''}`;
+  const tbody = document.getElementById('products-body');
+  const empty = document.getElementById('products-empty');
+
+  if (!list.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = list.map(p => {
+    const c = calcProduct(p);
+    const dur = c.duration != null ? c.duration + 'j' : '—';
+    return `<tr>
+      <td class="td-photo">${photoCell(p)}</td>
+      <td><b>${esc(p.name)}</b><br><small style="color:var(--text-muted)">${esc(p.size||'')}</small></td>
+      <td>${esc(p.category||'—')}</td>
+      <td>${esc(p.brand||'—')}</td>
+      <td>${esc(p.size||'—')}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td class="num">${fmt(n(p.purchasePrice) + n(p.purchaseFees))}</td>
+      <td class="num">${p.soldPrice ? fmt(n(p.soldPrice)) : (p.listingPrice ? fmt(n(p.listingPrice))+'*' : '—')}</td>
+      <td class="num ${profitClass(c.profit)}">${c.profit != null ? fmt(c.profit) : '—'}</td>
+      <td class="num">${c.margin != null ? fmtP(c.margin) : '—'}</td>
+      <td class="num">${c.roi != null ? fmtP(c.roi) : '—'}</td>
+      <td>${dur}</td>
+      <td><div class="action-cell">
+        <button class="btn-icon" title="Modifier" onclick="editProduct('${p.id}')">✏️</button>
+        <button class="btn-icon" title="Dupliquer" onclick="dupeProduct('${p.id}')">📋</button>
+        <button class="btn-icon" title="Supprimer" onclick="deleteProduct('${p.id}')">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function photoCell(p) {
+  if (p.photo) return `<img src="${esc(p.photo)}" class="product-photo" onerror="this.style.display='none'">`;
+  return `<div class="photo-placeholder">👗</div>`;
+}
+function statusBadge(s) {
+  return `<span class="badge badge-${s}">${STATUS_LABELS[s]||s}</span>`;
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── PRODUCT MODAL ─────────────────────────────────────────
+function openProductModal(id) {
+  clearForm();
+  document.getElementById('modal-title').textContent = id ? 'Modifier le produit' : 'Ajouter un produit';
+  if (id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('f-id').value            = p.id;
+    document.getElementById('f-name').value          = p.name || '';
+    document.getElementById('f-category').value      = p.category || '';
+    document.getElementById('f-brand').value         = p.brand || '';
+    document.getElementById('f-size').value          = p.size || '';
+    document.getElementById('f-status').value        = p.status || 'stock';
+    document.getElementById('f-channel').value       = p.channel || '';
+    document.getElementById('f-purchasePrice').value = p.purchasePrice || '';
+    document.getElementById('f-purchaseFees').value  = p.purchaseFees || '';
+    document.getElementById('f-listingPrice').value  = p.listingPrice || '';
+    document.getElementById('f-soldPrice').value     = p.soldPrice || '';
+    document.getElementById('f-vintedFees').value    = p.vintedFees || '';
+    document.getElementById('f-packagingFees').value = p.packagingFees || '';
+    document.getElementById('f-shippingFees').value  = p.shippingFees || '';
+    document.getElementById('f-purchaseDate').value  = p.purchaseDate || '';
+    document.getElementById('f-listingDate').value   = p.listingDate || '';
+    document.getElementById('f-saleDate').value      = p.saleDate || '';
+    document.getElementById('f-photo').value         = p.photo || '';
+    document.getElementById('f-comment').value       = p.comment || '';
+    updateCalcPreview();
+  }
+  document.getElementById('product-modal-overlay').classList.add('open');
+}
+function editProduct(id) { openProductModal(id); }
+function closeProductModal() {
+  document.getElementById('product-modal-overlay').classList.remove('open');
+}
+function maybeCloseModal(e) {
+  if (e.target === document.getElementById('product-modal-overlay')) closeProductModal();
+}
+function clearForm() {
+  ['f-id','f-name','f-category','f-brand','f-size','f-channel',
+   'f-purchasePrice','f-purchaseFees','f-listingPrice','f-soldPrice',
+   'f-vintedFees','f-packagingFees','f-shippingFees',
+   'f-purchaseDate','f-listingDate','f-saleDate','f-photo','f-comment'
+  ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('f-status').value = 'stock';
+  document.getElementById('calc-preview').style.display = 'none';
+}
+
+// Live calc preview
+['f-purchasePrice','f-purchaseFees','f-packagingFees','f-shippingFees','f-soldPrice','f-vintedFees']
+  .forEach(id => document.getElementById(id)?.addEventListener('input', updateCalcPreview));
+
+function updateCalcPreview() {
+  const tmp = {
+    purchasePrice: document.getElementById('f-purchasePrice').value,
+    purchaseFees:  document.getElementById('f-purchaseFees').value,
+    packagingFees: document.getElementById('f-packagingFees').value,
+    shippingFees:  document.getElementById('f-shippingFees').value,
+    soldPrice:     document.getElementById('f-soldPrice').value,
+    vintedFees:    document.getElementById('f-vintedFees').value,
+    status: document.getElementById('f-soldPrice').value > 0 ? 'sold' : 'online'
+  };
+  const c = calcProduct(tmp);
+  const preview = document.getElementById('calc-preview');
+  if (!n(tmp.purchasePrice) && !n(tmp.soldPrice)) { preview.style.display = 'none'; return; }
+  preview.style.display = 'block';
+  document.getElementById('prev-cost').textContent   = fmt(c.cost);
+  document.getElementById('prev-profit').className   = profitClass(c.profit);
+  document.getElementById('prev-profit').textContent = c.profit != null ? fmt(c.profit) : 'N/A (non vendu)';
+  document.getElementById('prev-margin').textContent = c.margin != null ? fmtP(c.margin) : '—';
+  document.getElementById('prev-roi').textContent    = c.roi    != null ? fmtP(c.roi)    : '—';
+}
+
+function saveProduct() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Le nom du produit est obligatoire.', 'error'); return; }
+  const purchasePrice = document.getElementById('f-purchasePrice').value;
+  if (!purchasePrice) { toast('Le prix d\'achat est obligatoire.', 'error'); return; }
+
+  const id = document.getElementById('f-id').value;
+  const data = {
+    id: id || uid(),
+    name,
+    category:      document.getElementById('f-category').value,
+    brand:         document.getElementById('f-brand').value.trim(),
+    size:          document.getElementById('f-size').value.trim(),
+    status:        document.getElementById('f-status').value,
+    channel:       document.getElementById('f-channel').value,
+    purchasePrice: n(purchasePrice),
+    purchaseFees:  n(document.getElementById('f-purchaseFees').value),
+    listingPrice:  n(document.getElementById('f-listingPrice').value),
+    soldPrice:     n(document.getElementById('f-soldPrice').value),
+    vintedFees:    n(document.getElementById('f-vintedFees').value),
+    packagingFees: n(document.getElementById('f-packagingFees').value),
+    shippingFees:  n(document.getElementById('f-shippingFees').value),
+    purchaseDate:  document.getElementById('f-purchaseDate').value,
+    listingDate:   document.getElementById('f-listingDate').value,
+    saleDate:      document.getElementById('f-saleDate').value,
+    photo:         document.getElementById('f-photo').value.trim(),
+    comment:       document.getElementById('f-comment').value.trim(),
+  };
+
+  if (id) {
+    const idx = products.findIndex(p => p.id === id);
+    if (idx !== -1) products[idx] = data;
+  } else {
+    products.unshift(data);
+  }
+  save();
+  closeProductModal();
+  toast(id ? 'Produit mis à jour ✓' : 'Produit ajouté ✓', 'success');
+  renderProducts();
+}
+
+function dupeProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const copy = { ...p, id: uid(), name: p.name + ' (copie)', status: 'stock',
+                  soldPrice: 0, saleDate: '', vintedFees: 0 };
+  products.unshift(copy);
+  save();
+  toast('Produit dupliqué ✓', 'success');
+  renderProducts();
+}
+
+function deleteProduct(id) {
+  showConfirm('Supprimer le produit ?', 'Cette action est irréversible.', () => {
+    products = products.filter(p => p.id !== id);
+    save();
+    toast('Produit supprimé.', 'success');
+    renderProducts();
+  });
+}
+
+// ── MONTHLY ────────────────────────────────────────────────
+function changeMonth(dir) {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + dir, 1);
+  renderMonthly();
+}
+
+function renderMonthly() {
+  const mk  = monthKey(currentMonth);
+  const prevMk = monthKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+
+  document.getElementById('month-label').textContent =
+    currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+  const sold     = products.filter(p => p.status === 'sold' && p.saleDate?.startsWith(mk));
+  const soldPrev = products.filter(p => p.status === 'sold' && p.saleDate?.startsWith(prevMk));
+  const bought   = products.filter(p => p.purchaseDate?.startsWith(mk));
+  const stock    = products.filter(p => ['stock','online','reserved'].includes(p.status));
+
+  const ca       = sold.reduce((s,p) => s + n(p.soldPrice), 0);
+  const caPrev   = soldPrev.reduce((s,p) => s + n(p.soldPrice), 0);
+  const profit   = sold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
+  const profitP  = soldPrev.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
+  const invested = bought.reduce((s,p) => s + n(p.purchasePrice) + n(p.purchaseFees), 0);
+  const avgMargin = sold.length ? sold.reduce((s,p) => s + (calcProduct(p).margin ?? 0), 0) / sold.length : 0;
+  const roi      = invested > 0 ? profit / invested * 100 : 0;
+
+  const trend = (curr, prev) => {
+    if (!prev) return '';
+    const d = curr - prev;
+    const pct = prev ? (d / Math.abs(prev) * 100).toFixed(0) : 0;
+    if (d > 0) return `<span class="trend-up">▲ ${pct}%</span>`;
+    if (d < 0) return `<span class="trend-down">▼ ${Math.abs(pct)}%</span>`;
+    return `<span class="trend-flat">= 0%</span>`;
+  };
+
+  const kpis = [
+    { label: "CA du mois",     value: fmt(ca),       sub: trend(ca, caPrev), cls: 'blue' },
+    { label: "Bénéfice net",   value: fmt(profit),   sub: trend(profit, profitP), cls: profit >= 0 ? 'green' : 'red' },
+    { label: "Articles vendus", value: sold.length,  sub: trend(sold.length, soldPrev.length) },
+    { label: "Investi ce mois", value: fmt(invested), sub: `${bought.length} achat${bought.length>1?'s':''}` },
+    { label: "Marge moyenne",  value: fmtP(avgMargin), sub: '', cls: avgMargin >= 20 ? 'green' : '' },
+    { label: "ROI du mois",    value: fmtP(roi),     sub: '' },
+    { label: "Stock restant",  value: stock.length,   sub: '' },
+  ];
+
+  document.getElementById('monthly-kpi').innerHTML = kpis.map(k =>
+    `<div class="kpi-card ${k.cls||''}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ''}
+    </div>`
+  ).join('');
+
+  const goal = settings.monthlyGoal;
+  const pct  = Math.min(100, profit / goal * 100);
+  document.getElementById('monthly-goal').innerHTML = `
+    <div class="progress-header">
+      <span class="progress-label">🎯 Objectif mensuel — ${fmt(goal)}</span>
+      <span class="progress-pct">${fmt(profit)} / ${fmt(goal)} (${pct.toFixed(1)} %)</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill ${pct >= 100 ? 'green' : ''}" style="width:${pct}%"></div>
+    </div>`;
+
+  // Daily chart
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 0).getDate();
+  const dailyProfits = Array(daysInMonth).fill(0);
+  sold.forEach(p => {
+    const day = parseInt(p.saleDate.slice(8,10)) - 1;
+    dailyProfits[day] += calcProduct(p).profit ?? 0;
+  });
+  createChart('chart-daily', {
+    type: 'bar',
+    data: {
+      labels: Array.from({length: daysInMonth}, (_,i) => i+1),
+      datasets: [{ label: 'Bénéfice (€)', data: dailyProfits,
+        backgroundColor: dailyProfits.map(v => v >= 0 ? '#16a34a88' : '#dc262688'),
+        borderColor: dailyProfits.map(v => v >= 0 ? '#16a34a' : '#dc2626'),
+        borderWidth: 1, borderRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => v+'€' } }, x: { grid: { display: false } } } }
+  });
+
+  // Monthly category mix
+  const catCount = {};
+  sold.forEach(p => { catCount[p.category||'autre'] = (catCount[p.category||'autre']||0) + 1; });
+  createChart('chart-monthly-cat', {
+    type: 'doughnut',
+    data: { labels: Object.keys(catCount), datasets: [{ data: Object.values(catCount),
+      backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
+      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+  });
+
+  // Table
+  const tbody = document.getElementById('monthly-sold-body');
+  const empty = document.getElementById('monthly-empty');
+  if (!sold.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = sold.sort((a,b) => (b.saleDate||'') > (a.saleDate||'') ? 1 : -1).map(p => {
+    const c = calcProduct(p);
+    return `<tr>
+      <td><b>${esc(p.name)}</b></td>
+      <td>${esc(p.category||'—')}</td>
+      <td>${esc(p.brand||'—')}</td>
+      <td class="num">${fmt(n(p.purchasePrice)+n(p.purchaseFees))}</td>
+      <td class="num">${fmt(n(p.soldPrice))}</td>
+      <td class="num ${profitClass(c.profit)}">${c.profit!=null?fmt(c.profit):'—'}</td>
+      <td class="num">${c.margin!=null?fmtP(c.margin):'—'}</td>
+      <td>${fmtDate(p.saleDate)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── ANALYSIS ───────────────────────────────────────────────
+function renderAnalysis() {
+  const sold = products.filter(p => p.status === 'sold');
+
+  // ALERTS
+  const alerts = [];
+  const slowStock = products.filter(p => ['stock','online'].includes(p.status) && daysAgo(p.purchaseDate) > 60);
+  if (slowStock.length)
+    alerts.push({ type: 'warning', msg: `⚠️ ${slowStock.length} article(s) en stock depuis plus de 60 jours. Envisagez de baisser les prix.` });
+
+  const lowMargin = sold.filter(p => { const c = calcProduct(p); return c.margin != null && c.margin < 15; });
+  if (lowMargin.length)
+    alerts.push({ type: 'danger', msg: `📉 ${lowMargin.length} vente(s) avec une marge inférieure à 15 %. Vérifiez vos prix d'achat.` });
+
+  const negProfit = sold.filter(p => { const c = calcProduct(p); return c.profit != null && c.profit < 0; });
+  if (negProfit.length)
+    alerts.push({ type: 'danger', msg: `🔴 ${negProfit.length} vente(s) en perte ! Analysez vos coûts.` });
+
+  document.getElementById('analysis-alerts').innerHTML = alerts.map(a =>
+    `<div class="alert alert-${a.type}">${a.msg}</div>`
+  ).join('');
+
+  // BEST CATEGORIES
+  const catProfit = {}, catCount = {}, catMargin = {};
+  sold.forEach(p => {
+    const k = p.category || 'autre';
+    const c = calcProduct(p);
+    catProfit[k] = (catProfit[k] || 0) + (c.profit ?? 0);
+    catCount[k]  = (catCount[k]  || 0) + 1;
+    catMargin[k] = (catMargin[k] || 0) + (c.margin ?? 0);
+  });
+
+  const topCats = Object.keys(catProfit).sort((a,b) => catProfit[b] - catProfit[a]).slice(0,5);
+  const topCatsHTML = topCats.map(k =>
+    `<div class="analysis-row">
+      <span class="analysis-name">${k}</span>
+      <span class="analysis-val ${catProfit[k]>=0?'profit-pos':'profit-neg'}">${fmt(catProfit[k])} (${catCount[k]} vte${catCount[k]>1?'s':''})</span>
+    </div>`
+  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Aucune donnée</div>';
+
+  // BEST BRANDS
+  const brandProfit = {}, brandCount = {};
+  sold.forEach(p => {
+    const k = p.brand || 'Sans marque';
+    const c = calcProduct(p);
+    brandProfit[k] = (brandProfit[k] || 0) + (c.profit ?? 0);
+    brandCount[k]  = (brandCount[k]  || 0) + 1;
+  });
+  const topBrands = Object.keys(brandProfit).sort((a,b) => brandProfit[b] - brandProfit[a]).slice(0,5);
+  const topBrandsHTML = topBrands.map(k =>
+    `<div class="analysis-row">
+      <span class="analysis-name">${esc(k)}</span>
+      <span class="analysis-val profit-pos">${fmt(brandProfit[k])} (${brandCount[k]} vte${brandCount[k]>1?'s':''})</span>
+    </div>`
+  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Aucune donnée</div>';
+
+  // FASTEST SELLERS (sold, with duration)
+  const withDur = sold.filter(p => p.listingDate && p.saleDate)
+    .map(p => ({ ...p, dur: daysBetween(p.listingDate, p.saleDate) }))
+    .sort((a,b) => a.dur - b.dur).slice(0,5);
+  const fastSellHTML = withDur.map(p =>
+    `<div class="analysis-row">
+      <span class="analysis-name">${esc(p.name)}</span>
+      <span class="analysis-val" style="color:var(--green)">${p.dur}j</span>
+    </div>`
+  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Aucune donnée (dates manquantes)</div>';
+
+  // SLEEPING STOCK
+  const sleeping = products.filter(p => ['stock','online'].includes(p.status) && p.purchaseDate)
+    .map(p => ({ ...p, age: daysAgo(p.purchaseDate) }))
+    .sort((a,b) => b.age - a.age).slice(0,5);
+  const sleepHTML = sleeping.map(p =>
+    `<div class="analysis-row">
+      <span class="analysis-name">${esc(p.name)}</span>
+      <span class="analysis-val" style="color:${p.age>60?'var(--red)':'var(--orange)'}">${p.age}j</span>
+    </div>`
+  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Stock vide 🎉</div>';
+
+  // AVG PRICES
+  const avgBuy  = sold.length ? sold.reduce((s,p)=>s+n(p.purchasePrice),0)/sold.length : 0;
+  const avgSell = sold.length ? sold.reduce((s,p)=>s+n(p.soldPrice),0)/sold.length : 0;
+  const avgCost = sold.length ? sold.reduce((s,p)=>s+calcProduct(p).cost,0)/sold.length : 0;
+
+  document.getElementById('analysis-grid').innerHTML = `
+    <div class="analysis-card">
+      <div class="analysis-card-title">🏆 Catégories les plus rentables</div>
+      ${topCatsHTML}
+    </div>
+    <div class="analysis-card">
+      <div class="analysis-card-title">🏷️ Marques les plus rentables</div>
+      ${topBrandsHTML}
+    </div>
+    <div class="analysis-card">
+      <div class="analysis-card-title">⚡ Articles vendus le plus vite</div>
+      ${fastSellHTML}
+    </div>
+    <div class="analysis-card">
+      <div class="analysis-card-title">😴 Stock dormant (ancienneté)</div>
+      ${sleepHTML}
+    </div>
+    <div class="analysis-card">
+      <div class="analysis-card-title">📐 Prix moyens (articles vendus)</div>
+      <div class="analysis-row"><span>Prix achat moyen</span><span class="analysis-val">${fmt(avgBuy)}</span></div>
+      <div class="analysis-row"><span>Coût total moyen</span><span class="analysis-val">${fmt(avgCost)}</span></div>
+      <div class="analysis-row"><span>Prix de vente moyen</span><span class="analysis-val">${fmt(avgSell)}</span></div>
+      <div class="analysis-row"><span>Ratio revente/achat</span><span class="analysis-val">${avgBuy>0?(avgSell/avgBuy).toFixed(1)+'x':'—'}</span></div>
+    </div>
+    <div class="analysis-card">
+      <div class="analysis-card-title">🔮 Projection mensuelle</div>
+      ${renderProjection()}
+    </div>
+  `;
+
+  // Charts
+  const pcLabels = Object.keys(catProfit);
+  const pcData   = Object.values(catProfit);
+  createChart('chart-profit-cat', {
+    type: 'bar',
+    data: { labels: pcLabels, datasets: [{ label: 'Bénéfice (€)', data: pcData,
+      backgroundColor: pcData.map((_,i) => COLORS[i % COLORS.length] + '99'),
+      borderColor: pcData.map((_,i) => COLORS[i % COLORS.length]), borderWidth: 1.5, borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => v+'€' } }, x: { grid: { display: false } } } }
+  });
+
+  const bm = {};
+  sold.forEach(p => {
+    const k = p.brand || 'Sans marque';
+    const c = calcProduct(p);
+    if (!bm[k]) bm[k] = { sum: 0, cnt: 0 };
+    bm[k].sum += c.margin ?? 0;
+    bm[k].cnt++;
+  });
+  const bmSorted = Object.entries(bm).sort((a,b) => (b[1].sum/b[1].cnt) - (a[1].sum/a[1].cnt)).slice(0,8);
+  createChart('chart-margin-brand', {
+    type: 'bar',
+    data: { labels: bmSorted.map(([k])=>k),
+            datasets: [{ label: 'Marge moy. (%)', data: bmSorted.map(([,v])=>(v.sum/v.cnt).toFixed(1)),
+              backgroundColor: '#2563eb88', borderColor: '#2563eb', borderWidth: 1.5, borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { callback: v => v+'%' } } } }
+  });
+}
+
+function renderProjection() {
+  const sold = products.filter(p => p.status === 'sold' && p.saleDate);
+  if (!sold.length) return '<div style="color:var(--text-muted);font-size:12px;">Pas encore de données</div>';
+
+  const now      = new Date();
+  const dayOfM   = now.getDate();
+  const daysInM  = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+
+  const thisMonthSold = sold.filter(p => p.saleDate.startsWith(monthKey(now)));
+  const monthProfit   = thisMonthSold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
+  const projected     = dayOfM > 0 ? (monthProfit / dayOfM) * daysInM : 0;
+  const goal          = settings.monthlyGoal;
+  const targets = [1000, 2000, 3000];
+
+  return `
+    <div class="analysis-row"><span>Bénéf. actuel du mois</span><span class="analysis-val profit-pos">${fmt(monthProfit)}</span></div>
+    <div class="analysis-row"><span>Projection fin de mois</span><span class="analysis-val ${projected>=goal?'profit-pos':'profit-neg'}">${fmt(projected)}</span></div>
+    ${targets.map(t => `<div class="analysis-row"><span>Pour atteindre ${t}€</span>
+      <span class="analysis-val">${monthProfit >= t ? '✅ Atteint' : fmt(t - monthProfit) + ' restants'}</span></div>`).join('')}
+  `;
+}
+
+// ── STOCK ─────────────────────────────────────────────────
+function renderStock() {
+  const stockItems = products.filter(p => ['stock','online','reserved'].includes(p.status));
+  const filterDays = parseInt(document.getElementById('stock-filter').value) || 0;
+
+  const totalBuyVal  = stockItems.reduce((s,p) => s + n(p.purchasePrice) + n(p.purchaseFees), 0);
+  const totalSellVal = stockItems.reduce((s,p) => s + n(p.listingPrice || p.purchasePrice), 0);
+
+  const kpis = [
+    { label: 'Articles en stock', value: stockItems.length, cls: '' },
+    { label: 'Valeur (prix achat)', value: fmt(totalBuyVal), cls: '' },
+    { label: 'Valeur estimée (vente)', value: fmt(totalSellVal), cls: 'green' },
+    { label: 'Plus-value potentielle', value: fmt(totalSellVal - totalBuyVal), cls: totalSellVal > totalBuyVal ? 'green' : 'red' },
+    { label: 'Articles > 30j', value: stockItems.filter(p => daysAgo(p.purchaseDate) > 30).length, cls: '' },
+    { label: 'Articles > 60j', value: stockItems.filter(p => daysAgo(p.purchaseDate) > 60).length, cls: 'orange' },
+    { label: 'Articles > 90j', value: stockItems.filter(p => daysAgo(p.purchaseDate) > 90).length, cls: 'red' },
+  ];
+  document.getElementById('stock-kpi').innerHTML = kpis.map(k =>
+    `<div class="kpi-card ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+    </div>`
+  ).join('');
+
+  // Alerts
+  const sleeping = stockItems.filter(p => daysAgo(p.purchaseDate) > 90);
+  const warn     = stockItems.filter(p => { const d = daysAgo(p.purchaseDate); return d > 60 && d <= 90; });
+  const alertsEl = document.getElementById('stock-alerts');
+  if (!sleeping.length && !warn.length) {
+    alertsEl.innerHTML = '<div style="color:var(--green);font-size:12px;margin-bottom:16px;">✅ Aucun article dormant. Beau travail !</div>';
+  } else {
+    alertsEl.innerHTML = `<div class="stock-alert-list">
+      ${sleeping.map(p => `<div class="stock-alert-item">
+        <span>🔴 <b>${esc(p.name)}</b> — en stock depuis <b>${daysAgo(p.purchaseDate)}j</b></span>
+        <button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Modifier</button>
+      </div>`).join('')}
+      ${warn.map(p => `<div class="stock-alert-item warn">
+        <span>🟠 <b>${esc(p.name)}</b> — en stock depuis <b>${daysAgo(p.purchaseDate)}j</b></span>
+        <button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Modifier</button>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // Charts
+  const catData = {};
+  stockItems.forEach(p => {
+    catData[p.category||'autre'] = (catData[p.category||'autre'] || { count:0, val:0 });
+    catData[p.category||'autre'].count++;
+    catData[p.category||'autre'].val += n(p.listingPrice || p.purchasePrice);
+  });
+  createChart('chart-stock-cat', {
+    type: 'doughnut',
+    data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData).map(v=>v.count),
+      backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
+      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+  });
+  createChart('chart-stock-val', {
+    type: 'bar',
+    data: { labels: Object.keys(catData), datasets: [{ label: 'Valeur (€)', data: Object.values(catData).map(v=>v.val.toFixed(2)),
+      backgroundColor: COLORS.map(c=>c+'99'), borderColor: COLORS, borderWidth: 1.5, borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => v+'€' } }, x: { grid: { display: false } } } }
+  });
+
+  // Table
+  let list = filterDays ? stockItems.filter(p => daysAgo(p.purchaseDate) > filterDays) : stockItems;
+  list = list.sort((a,b) => (daysAgo(b.purchaseDate)||0) - (daysAgo(a.purchaseDate)||0));
+
+  const tbody = document.getElementById('stock-body');
+  const empty = document.getElementById('stock-empty');
+  if (!list.length) { tbody.innerHTML = ''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = list.map(p => {
+    const age = daysAgo(p.purchaseDate);
+    const ageColor = age > 90 ? 'var(--red)' : age > 60 ? 'var(--orange)' : 'var(--text-muted)';
+    return `<tr>
+      <td><b>${esc(p.name)}</b></td>
+      <td>${esc(p.category||'—')}</td>
+      <td>${esc(p.brand||'—')}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td class="num">${fmt(n(p.purchasePrice)+n(p.purchaseFees))}</td>
+      <td class="num">${p.listingPrice ? fmt(n(p.listingPrice)) : '—'}</td>
+      <td style="color:${ageColor};font-weight:600;">${age != null ? age+'j' : '—'}</td>
+      <td><button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Modifier</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── IMPORT / EXPORT ────────────────────────────────────────
+function renderIO() {
+  const goalInput = document.getElementById('goal-input');
+  if (goalInput) goalInput.value = settings.monthlyGoal;
+}
+
+function saveGoal() {
+  const v = parseFloat(document.getElementById('goal-input').value);
+  if (!v || v <= 0) { toast('Objectif invalide.', 'error'); return; }
+  settings.monthlyGoal = v;
+  save();
+  toast(`Objectif mensuel mis à jour : ${fmt(v)} ✓`, 'success');
+}
+
+function exportJSON() {
+  const data = { products, settings, exportedAt: new Date().toISOString(), version: '1.0' };
+  download(JSON.stringify(data, null, 2), `vinted_backup_${dateSlug()}.json`, 'application/json');
+  toast('Export JSON téléchargé ✓', 'success');
+}
+
+function importJSON(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data.products)) throw new Error('Format invalide');
+      showConfirm('Importer les données ?',
+        `${data.products.length} produit(s) vont remplacer vos données actuelles.`, () => {
+        products = data.products;
+        if (data.settings) settings = { ...settings, ...data.settings };
+        save();
+        toast(`Import réussi — ${products.length} produits ✓`, 'success');
+        renderDashboard();
+      });
+    } catch { toast('Fichier JSON invalide.', 'error'); }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+const CSV_HEADERS = ['nom','categorie','marque','taille','prixAchat','fraisAchat','prixVente','prixVendu',
+  'fraisVinted','fraisEmballage','fraisLivraison','dateAchat','dateMiseEnLigne','dateVente','statut','canal','commentaire'];
+
+function exportCSV() {
+  const rows = [CSV_HEADERS.join(',')];
+  products.forEach(p => {
+    rows.push([
+      csvCell(p.name), csvCell(p.category), csvCell(p.brand), csvCell(p.size),
+      p.purchasePrice, p.purchaseFees, p.listingPrice, p.soldPrice,
+      p.vintedFees, p.packagingFees, p.shippingFees,
+      p.purchaseDate, p.listingDate, p.saleDate, p.status, p.channel,
+      csvCell(p.comment)
+    ].join(','));
+  });
+  download(rows.join('\n'), `vinted_produits_${dateSlug()}.csv`, 'text/csv;charset=utf-8;');
+  toast('Export CSV téléchargé ✓', 'success');
+}
+
+function importCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+      const rows = lines.slice(1);
+      const imported = [];
+      rows.forEach(row => {
+        const vals = parseCSVRow(row);
+        const obj = {};
+        headers.forEach((h,i) => obj[h] = vals[i] || '');
+        imported.push({
+          id: uid(), name: obj.nom, category: obj.categorie, brand: obj.marque, size: obj.taille,
+          purchasePrice: n(obj.prixAchat), purchaseFees: n(obj.fraisAchat),
+          listingPrice: n(obj.prixVente), soldPrice: n(obj.prixVendu),
+          vintedFees: n(obj.fraisVinted), packagingFees: n(obj.fraisEmballage), shippingFees: n(obj.fraisLivraison),
+          purchaseDate: obj.dateAchat, listingDate: obj.dateMiseEnLigne, saleDate: obj.dateVente,
+          status: obj.statut || 'stock', channel: obj.canal, comment: obj.commentaire, photo: ''
+        });
+      });
+      if (!imported.length) { toast('Aucun produit trouvé dans le CSV.', 'error'); return; }
+      showConfirm('Importer le CSV ?',
+        `${imported.length} produit(s) seront ajoutés à votre liste.`, () => {
+        products = [...imported, ...products];
+        save();
+        toast(`${imported.length} produit(s) importés ✓`, 'success');
+        input.value = '';
+      });
+    } catch(err) { toast('Erreur lecture CSV : ' + err.message, 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVRow(row) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function downloadCSVTemplate() {
+  const sample = [CSV_HEADERS.join(','),
+    '"Chemise bleue","chemise","Zara","M","3","0.5","14","14","1.2","0.3","0","2024-01-15","2024-01-16","2024-01-20","sold","brocante","Exemple"'
+  ].join('\n');
+  download(sample, 'vinted_modele.csv', 'text/csv;charset=utf-8;');
+}
+
+function csvCell(v) {
+  if (!v) return '';
+  return '"' + String(v).replace(/"/g, '""') + '"';
+}
+function download(content, filename, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function dateSlug() { return new Date().toISOString().slice(0,10); }
+
+function confirmReset() {
+  showConfirm('Réinitialiser toutes les données ?',
+    'Tous vos produits et paramètres seront supprimés. Cette action est irréversible.', () => {
+    products = []; settings = { monthlyGoal: MONTHLY_GOAL_DEFAULT };
+    save();
+    toast('Données réinitialisées.', 'success');
+    renderDashboard();
+  });
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s';
+    setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ── CONFIRM DIALOG ─────────────────────────────────────────
+let _confirmCb = null;
+function showConfirm(title, msg, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  _confirmCb = cb;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  _confirmCb = null;
+}
+document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+  if (_confirmCb) _confirmCb();
+  closeConfirm();
+});
+
+// ── KEYBOARD ───────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeProductModal();
+    closeConfirm();
+  }
+});
+
+// ── INIT ───────────────────────────────────────────────────
+function init() {
+  load();
+  if (!products.length) {
+    loadSampleData();
+    toast('Données d\'exemple chargées. Bienvenue ! 👗', 'success');
+  }
+  renderDashboard();
+}
+
+init();
+</script>
+</body>
+</html>
