@@ -1,1952 +1,1484 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vinted Dashboard — Gestion Business</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    /* ── RESET & BASE ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #f4f5f7;
-      --surface: #ffffff;
-      --border: #e2e4e9;
-      --text: #1a1d23;
-      --text-muted: #6b7280;
-      --primary: #2563eb;
-      --primary-light: #eff6ff;
-      --green: #16a34a;
-      --green-light: #f0fdf4;
-      --red: #dc2626;
-      --red-light: #fef2f2;
-      --orange: #ea580c;
-      --orange-light: #fff7ed;
-      --yellow: #ca8a04;
-      --yellow-light: #fefce8;
-      --radius: 10px;
-      --shadow: 0 1px 4px rgba(0,0,0,.08);
-      --shadow-md: 0 4px 16px rgba(0,0,0,.12);
-      --sidebar-w: 220px;
-      --header-h: 56px;
-      --transition: .18s ease;
-    }
-    html { font-size: 14px; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-           background: var(--bg); color: var(--text); min-height: 100vh; }
-    a { color: inherit; text-decoration: none; }
-    button { cursor: pointer; font-family: inherit; font-size: 13px; border: none; }
-    input, select, textarea { font-family: inherit; font-size: 13px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { text-align: left; padding: 9px 12px; }
-    thead th { background: var(--bg); font-weight: 600; font-size: 12px;
-                text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
-                border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
-    tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--bg); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FBA Tracker — Suivi Logistique</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #eff6ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--gray-50); color: var(--gray-800); font-size: 14px; line-height: 1.5; }
+  a { color: var(--primary); text-decoration: none; cursor: pointer; }
+  a:hover { text-decoration: underline; }
 
-    /* ── LAYOUT ── */
-    #app { display: flex; min-height: 100vh; }
+  nav {
+    background: var(--gray-900);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 16px;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-wrap: wrap;
+  }
+  nav .brand { font-weight: 700; font-size: 16px; color: white; margin-right: 12px; white-space: nowrap; }
+  nav .brand span { color: #60a5fa; }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: #d1d5db;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font);
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,.1); color: white; }
+  .nav-btn.active { background: var(--primary); color: white; }
+  nav .spacer { flex: 1; }
 
-    /* SIDEBAR */
-    #sidebar {
-      width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
-      overflow-y: auto;
-    }
-    .sidebar-logo {
-      padding: 18px 20px 16px; font-size: 16px; font-weight: 700; color: var(--primary);
-      border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
-    }
-    .sidebar-logo span { font-size: 20px; }
-    .sidebar-nav { padding: 12px 0; flex: 1; }
-    .nav-item {
-      display: flex; align-items: center; gap: 10px; padding: 9px 20px;
-      color: var(--text-muted); font-size: 13px; font-weight: 500;
-      cursor: pointer; transition: all var(--transition); border-radius: 0;
-      position: relative;
-    }
-    .nav-item:hover { color: var(--text); background: var(--bg); }
-    .nav-item.active { color: var(--primary); background: var(--primary-light); font-weight: 600; }
-    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
-    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
-    .sidebar-footer small { color: var(--text-muted); font-size: 11px; }
+  .page { display: none; padding: 24px 16px; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; }
 
-    /* MAIN */
-    #main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-    #topbar {
-      height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px; position: sticky; top: 0; z-index: 50;
-    }
-    #topbar-title { font-size: 16px; font-weight: 700; }
-    .topbar-actions { display: flex; align-items: center; gap: 10px; }
-    #content { padding: 24px; flex: 1; }
+  .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 8px; flex-wrap: wrap; }
+  .card-title { font-size: 16px; font-weight: 600; color: var(--gray-800); }
+  .section-title { font-size: 20px; font-weight: 700; color: var(--gray-900); margin-bottom: 20px; }
 
-    /* SECTION */
-    .section { display: none; }
-    .section.active { display: block; }
-    .section-header { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-    .section-title { font-size: 20px; font-weight: 700; }
-    .section-subtitle { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius); border: none;
+    cursor: pointer; font-size: 13px; font-family: var(--font); font-weight: 500;
+    transition: background .15s, opacity .15s; white-space: nowrap;
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+  .btn-secondary { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-200); }
+  .btn-secondary:hover:not(:disabled) { background: var(--gray-200); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover:not(:disabled) { background: #15803d; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-ghost { background: none; border: 1px solid var(--gray-300); color: var(--gray-600); }
+  .btn-ghost:hover { background: var(--gray-100); }
 
-    /* CARDS KPI */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .kpi-card {
-      background: var(--surface); border-radius: var(--radius); padding: 16px 18px;
-      border: 1px solid var(--border); box-shadow: var(--shadow);
-    }
-    .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-                 color: var(--text-muted); margin-bottom: 8px; }
-    .kpi-value { font-size: 22px; font-weight: 700; line-height: 1; }
-    .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
-    .kpi-card.green .kpi-value { color: var(--green); }
-    .kpi-card.red .kpi-value { color: var(--red); }
-    .kpi-card.blue .kpi-value { color: var(--primary); }
-    .kpi-card.orange .kpi-value { color: var(--orange); }
+  .form-group { margin-bottom: 16px; }
+  .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 0; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+  input[type=text], input[type=number], input[type=date], select, textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--gray-300);
+    border-radius: var(--radius); font-size: 14px; font-family: var(--font);
+    color: var(--gray-800); background: white; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  textarea { resize: vertical; min-height: 80px; }
+  .form-hint { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+  .form-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
 
-    /* PROGRESS BAR */
-    .progress-container { background: var(--surface); border-radius: var(--radius); padding: 18px 20px;
-                           border: 1px solid var(--border); margin-bottom: 24px; }
-    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .progress-label { font-size: 13px; font-weight: 600; }
-    .progress-pct { font-size: 13px; font-weight: 700; color: var(--primary); }
-    .progress-bar-bg { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #60a5fa);
-                          border-radius: 99px; transition: width .5s ease; }
-    .progress-bar-fill.green { background: linear-gradient(90deg, var(--green), #4ade80); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+  }
+  .badge-commande { background: #e0e7ff; color: #3730a3; }
+  .badge-recu { background: #fce7f3; color: #9d174d; }
+  .badge-envoye { background: #fef3c7; color: #92400e; }
+  .badge-vente { background: var(--success-light); color: var(--success); }
+  .badge-termine { background: var(--gray-100); color: var(--gray-500); }
 
-    /* CHARTS */
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .chart-card { background: var(--surface); border-radius: var(--radius); padding: 18px;
-                   border: 1px solid var(--border); box-shadow: var(--shadow); }
-    .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-muted); }
-    .chart-wrap { position: relative; height: 200px; }
+  .alert { padding: 12px 16px; border-radius: var(--radius); margin-bottom: 12px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; }
+  .alert-danger { background: var(--danger-light); border: 1px solid #fca5a5; color: #991b1b; }
+  .alert-warning { background: var(--warning-light); border: 1px solid #fcd34d; color: #92400e; }
+  .alert-success { background: var(--success-light); border: 1px solid #86efac; color: #14532d; }
+  .alert-info { background: var(--primary-light); border: 1px solid #93c5fd; color: #1e3a8a; }
+  .alert-icon { font-size: 16px; flex-shrink: 0; }
 
-    /* TABLE CARD */
-    .table-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
-                   box-shadow: var(--shadow); overflow: hidden; }
-    .table-toolbar { padding: 12px 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-                      border-bottom: 1px solid var(--border); }
-    .table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; }
-    .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); }
-    .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-state p { font-size: 13px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--gray-50); text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--gray-500); border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--gray-50); }
+  .table-empty { text-align: center; color: var(--gray-400); padding: 40px; font-style: italic; }
 
-    /* BUTTONS */
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
-            border-radius: 7px; font-weight: 600; font-size: 13px; transition: all var(--transition); }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: #1d4ed8; }
-    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--border); }
-    .btn-success { background: var(--green); color: #fff; }
-    .btn-success:hover { background: #15803d; }
-    .btn-danger { background: var(--red); color: #fff; }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-ghost { background: transparent; color: var(--text-muted); padding: 6px 8px; }
-    .btn-ghost:hover { color: var(--text); background: var(--bg); border-radius: 6px; }
-    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
-    .btn-icon { padding: 6px; border-radius: 6px; background: transparent; color: var(--text-muted); }
-    .btn-icon:hover { background: var(--bg); color: var(--text); }
+  .cycles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .cycle-card {
+    background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px; border-left: 4px solid var(--gray-200);
+    cursor: pointer; transition: box-shadow .15s, transform .1s;
+  }
+  .cycle-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .cycle-card.status-commande { border-left-color: #818cf8; }
+  .cycle-card.status-recu_etiquete { border-left-color: #f472b6; }
+  .cycle-card.status-envoye_amazon { border-left-color: #fbbf24; }
+  .cycle-card.status-en_vente { border-left-color: var(--success); }
+  .cycle-card.alert-60j { border-top: 3px solid var(--danger); }
+  .cycle-card.alert-bloque { border-top: 3px solid var(--warning); }
+  .cycle-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px; }
+  .cycle-card-name { font-weight: 600; font-size: 14px; color: var(--gray-900); line-height: 1.3; }
+  .cycle-card-ean { font-size: 11px; color: var(--gray-400); font-family: monospace; margin-top: 2px; }
+  .cycle-card-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .metric { background: var(--gray-50); border-radius: 6px; padding: 8px 10px; }
+  .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--gray-400); margin-bottom: 2px; }
+  .metric-value { font-size: 16px; font-weight: 700; color: var(--gray-800); }
+  .metric-value.danger { color: var(--danger); }
+  .metric-value.warning { color: var(--warning); }
+  .metric-value.success { color: var(--success); }
+  .metric-sub { font-size: 10px; color: var(--gray-400); }
+  .cycle-card-alerts { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .cycle-alert-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+  .cycle-alert-badge.danger { background: var(--danger-light); color: var(--danger); }
+  .cycle-alert-badge.warning { background: var(--warning-light); color: var(--warning); }
 
-    /* INPUTS */
-    .input, .select, .textarea {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
-      padding: 7px 11px; color: var(--text); width: 100%;
-      transition: border-color var(--transition);
-    }
-    .input:focus, .select:focus, .textarea:focus {
-      outline: none; border-color: var(--primary); background: var(--surface);
-      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
-    }
-    .search-input { width: 220px; }
+  .timeline { display: flex; align-items: flex-start; margin: 20px 0; overflow-x: auto; padding-bottom: 4px; }
+  .timeline-step { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 90px; position: relative; }
+  .timeline-step:not(:last-child)::after { content: ''; position: absolute; top: 16px; left: 50%; width: 100%; height: 2px; background: var(--gray-200); z-index: 0; }
+  .timeline-step.done:not(:last-child)::after { background: var(--primary); }
+  .timeline-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--gray-200); background: white; display: flex; align-items: center; justify-content: center; font-size: 13px; position: relative; z-index: 1; }
+  .timeline-step.done .timeline-dot { background: var(--primary); border-color: var(--primary); color: white; }
+  .timeline-step.current .timeline-dot { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,.15); }
+  .timeline-label { font-size: 11px; text-align: center; margin-top: 6px; color: var(--gray-500); font-weight: 500; max-width: 90px; }
+  .timeline-step.done .timeline-label, .timeline-step.current .timeline-label { color: var(--primary); font-weight: 600; }
+  .timeline-date { font-size: 10px; color: var(--gray-400); text-align: center; max-width: 90px; }
 
-    /* BADGES / STATUS */
-    .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; }
-    .badge-stock    { background: var(--primary-light); color: var(--primary); }
-    .badge-online   { background: var(--green-light);   color: var(--green); }
-    .badge-reserved { background: var(--yellow-light);  color: var(--yellow); }
-    .badge-sold     { background: #f3f4f6; color: #374151; }
-    .badge-unsold   { background: var(--red-light);     color: var(--red); }
-    .badge-returned { background: var(--orange-light);  color: var(--orange); }
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-bar input, .filter-bar select { flex: 1; min-width: 140px; max-width: 220px; }
+  .filter-chip { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--gray-200); background: white; font-size: 12px; cursor: pointer; transition: all .15s; color: var(--gray-600); }
+  .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .filter-chip:hover:not(.active) { background: var(--gray-100); }
 
-    .profit-pos { color: var(--green); font-weight: 600; }
-    .profit-neg { color: var(--red);   font-weight: 600; }
-    .profit-neu { color: var(--text-muted); }
+  .drop-zone { border: 2px dashed var(--gray-300); border-radius: var(--radius); padding: 48px 24px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; position: relative; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--primary); background: var(--primary-light); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-zone-icon { font-size: 40px; margin-bottom: 12px; }
+  .drop-zone-text { color: var(--gray-500); font-size: 14px; }
+  .drop-zone-text strong { color: var(--primary); }
 
-    /* MODAL */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000;
-      display: flex; align-items: center; justify-content: center; padding: 16px;
-      opacity: 0; pointer-events: none; transition: opacity var(--transition);
-    }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal {
-      background: var(--surface); border-radius: 12px; width: 100%; max-width: 700px;
-      max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow-md);
-      transform: translateY(20px); transition: transform var(--transition);
-    }
-    .modal-overlay.open .modal { transform: translateY(0); }
-    .modal-header { padding: 18px 22px 0; display: flex; justify-content: space-between; align-items: center; }
-    .modal-title { font-size: 16px; font-weight: 700; }
-    .modal-body { padding: 18px 22px; }
-    .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border);
-                     display: flex; justify-content: flex-end; gap: 10px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .form-grid .full { grid-column: 1 / -1; }
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-    .form-section { margin: 18px 0 10px; font-size: 12px; font-weight: 700; text-transform: uppercase;
-                     letter-spacing: .06em; color: var(--text-muted); border-bottom: 1px solid var(--border);
-                     padding-bottom: 6px; }
+  .progress-bar { height: 6px; background: var(--gray-100); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; background: var(--primary); transition: width .3s; }
+  .progress-fill.danger { background: var(--danger); }
+  .progress-fill.warning { background: var(--warning); }
+  .progress-fill.success { background: var(--success); }
 
-    /* ALERT */
-    .alert { padding: 10px 14px; border-radius: 7px; font-size: 12px; margin-bottom: 12px; display: flex; gap: 8px; }
-    .alert-warning { background: var(--orange-light); color: var(--orange); border: 1px solid #fed7aa; }
-    .alert-danger  { background: var(--red-light);    color: var(--red);    border: 1px solid #fecaca; }
-    .alert-info    { background: var(--primary-light); color: var(--primary); border: 1px solid #bfdbfe; }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: white; border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--gray-900); }
+  .stat-label { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
 
-    /* ANALYSIS CARDS */
-    .analysis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .analysis-card { background: var(--surface); border-radius: var(--radius); padding: 18px;
-                      border: 1px solid var(--border); }
-    .analysis-card-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; display: flex; gap: 8px; align-items: center; }
-    .analysis-row { display: flex; justify-content: space-between; align-items: center;
-                     padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-    .analysis-row:last-child { border-bottom: none; }
-    .analysis-name { font-weight: 500; }
-    .analysis-val  { font-weight: 700; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.3); padding: 24px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--gray-900); }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; flex-wrap: wrap; }
 
-    /* STOCK ALERTS */
-    .stock-alert-list { display: flex; flex-direction: column; gap: 8px; }
-    .stock-alert-item { display: flex; align-items: center; justify-content: space-between;
-                         padding: 10px 14px; background: var(--red-light); border-radius: 7px;
-                         border: 1px solid #fecaca; font-size: 12px; }
-    .stock-alert-item.warn { background: var(--orange-light); border-color: #fed7aa; }
+  .preview-table-wrap { max-height: 300px; overflow-y: auto; margin: 12px 0; }
+  .anomaly-row td { background: #fff5f5 !important; }
+  .anomaly-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--danger-light); color: var(--danger); font-weight: 600; display: inline-block; }
 
-    /* MONTHLY TABLE */
-    .monthly-comparison { display: flex; gap: 10px; align-items: center; font-size: 12px; }
-    .trend-up   { color: var(--green); }
-    .trend-down { color: var(--red); }
-    .trend-flat { color: var(--text-muted); }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--gray-500); font-size: 13px; margin-bottom: 16px; cursor: pointer; background: none; border: none; font-family: var(--font); }
+  .back-link:hover { color: var(--primary); }
 
-    /* TOAST */
-    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-                         display: flex; flex-direction: column; gap: 8px; }
-    .toast { background: var(--text); color: #fff; padding: 10px 16px; border-radius: 8px;
-              font-size: 13px; max-width: 320px; box-shadow: var(--shadow-md);
-              animation: slideIn .25s ease; }
-    .toast.success { background: var(--green); }
-    .toast.error   { background: var(--red); }
-    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .step-panel { border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+  .step-header { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; background: var(--gray-50); gap: 8px; flex-wrap: wrap; }
+  .step-header.done { background: var(--success-light); }
+  .step-header.current { background: var(--primary-light); }
+  .step-body { padding: 16px; border-top: 1px solid var(--gray-200); }
+  .step-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 
-    /* CONFIRM DIALOG */
-    #confirm-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 2000;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: opacity var(--transition);
-    }
-    #confirm-overlay.open { opacity: 1; pointer-events: all; }
-    .confirm-box { background: var(--surface); border-radius: 12px; padding: 24px; max-width: 380px;
-                    width: 100%; box-shadow: var(--shadow-md); text-align: center; }
-    .confirm-box h3 { margin-bottom: 8px; }
-    .confirm-box p  { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
-    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+  .text-muted { color: var(--gray-400); font-style: italic; }
+  .text-right { text-align: right; }
+  .font-mono { font-family: monospace; }
+  .divider { border: none; border-top: 1px solid var(--gray-200); margin: 20px 0; }
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .flex-wrap { flex-wrap: wrap; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .hidden { display: none !important; }
 
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      #sidebar { transform: translateX(-100%); transition: transform var(--transition); }
-      #sidebar.open { transform: none; }
-      #main { margin-left: 0; }
-      .form-grid { grid-template-columns: 1fr; }
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      .search-input { width: 140px; }
-      #content { padding: 14px; }
-      .charts-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 480px) {
-      .kpi-grid { grid-template-columns: 1fr 1fr; }
-    }
-
-    /* MENU TOGGLE */
-    #menu-toggle { display: none; }
-    @media (max-width: 768px) { #menu-toggle { display: flex; } }
-
-    /* OVERLAY SIDEBAR MOBILE */
-    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 99; }
-    #sidebar-overlay.open { display: block; }
-
-    /* PHOTO */
-    .product-photo { width: 36px; height: 36px; border-radius: 6px; object-fit: cover;
-                      background: var(--bg); border: 1px solid var(--border); }
-    .photo-placeholder { width: 36px; height: 36px; border-radius: 6px; background: var(--bg);
-                          border: 1px solid var(--border); display: flex; align-items: center;
-                          justify-content: center; font-size: 16px; color: var(--text-muted); }
-
-    /* IMPORT/EXPORT */
-    .io-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-    .io-card { background: var(--surface); border-radius: var(--radius); padding: 20px;
-                border: 1px solid var(--border); text-align: center; }
-    .io-card .io-icon { font-size: 32px; margin-bottom: 10px; }
-    .io-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-    .io-card p  { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
-
-    /* MONTH SELECTOR */
-    .month-nav { display: flex; align-items: center; gap: 10px; }
-    .month-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
-                          padding: 6px 10px; font-size: 13px; font-weight: 600; }
-    .month-nav button:hover { background: var(--border); }
-    #month-label { font-size: 14px; font-weight: 700; min-width: 120px; text-align: center; }
-
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-
-    /* Action cell */
-    .action-cell { display: flex; gap: 4px; }
-    .td-photo { width: 48px; }
-    td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  </style>
+  @media (max-width: 600px) {
+    nav { height: auto; padding: 8px 12px; }
+    .cycles-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .page { padding: 16px 12px; }
+    .timeline-label, .timeline-date { display: none; }
+  }
+</style>
 </head>
 <body>
 
-<!-- ── CONFIRM DIALOG ── -->
-<div id="confirm-overlay">
-  <div class="confirm-box">
-    <h3 id="confirm-title">Confirmer</h3>
-    <p id="confirm-msg"></p>
-    <div class="confirm-actions">
-      <button class="btn btn-secondary" onclick="closeConfirm()">Annuler</button>
-      <button class="btn btn-danger"    id="confirm-ok-btn">Confirmer</button>
+<nav>
+  <div class="brand">FBA<span>Tracker</span></div>
+  <button class="nav-btn active" onclick="showPage('dashboard')">📊 Dashboard</button>
+  <button class="nav-btn" onclick="showPage('produits')">📦 Produits</button>
+  <button class="nav-btn" onclick="showPage('import')">📥 Import CSV</button>
+  <button class="nav-btn" onclick="showPage('settings')">⚙️ Données</button>
+  <div class="spacer"></div>
+  <button class="btn btn-primary btn-sm" onclick="showNouveauCycle()">+ Nouveau cycle</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="flex justify-between items-center flex-wrap gap-8 mb-16">
+    <div class="section-title" style="margin-bottom:0">Cycles actifs</div>
+    <div class="flex gap-8 flex-wrap items-center">
+      <input type="text" id="dash-search" placeholder="Rechercher produit / EAN…" oninput="renderDashboard()" style="width:200px">
+      <select id="dash-sort" onchange="renderDashboard()">
+        <option value="jours_desc">Trier : jours ↓</option>
+        <option value="jours_asc">Trier : jours ↑</option>
+        <option value="statut">Trier : statut</option>
+        <option value="stock">Trier : stock restant</option>
+      </select>
+    </div>
+  </div>
+  <div id="dash-filter-chips" class="filter-bar mb-16"></div>
+  <div id="dash-stats" class="stats-row"></div>
+  <div id="dash-alerts" class="mb-16"></div>
+  <div id="dash-cycles" class="cycles-grid"></div>
+</div>
+
+<!-- CYCLE DETAIL -->
+<div id="page-cycle" class="page">
+  <button class="back-link" onclick="showPage('dashboard')">← Retour au dashboard</button>
+  <div id="cycle-detail-content"></div>
+</div>
+
+<!-- NOUVEAU CYCLE -->
+<div id="page-nouveau-cycle" class="page">
+  <button class="back-link" onclick="showPage('dashboard')">← Retour</button>
+  <div class="section-title">Nouveau cycle d'achat</div>
+  <div class="card">
+    <div class="card-title mb-16">1. Produit</div>
+    <div class="form-group">
+      <label>EAN *</label>
+      <input type="text" id="nc-ean" placeholder="Ex: 3760000000000" oninput="checkEAN()">
+      <div class="form-hint">Saisir l'EAN pour vérifier si le produit existe déjà.</div>
+    </div>
+    <div id="nc-produit-found" class="hidden">
+      <div class="alert alert-success"><span class="alert-icon">✓</span><div id="nc-found-text"></div></div>
+    </div>
+    <div id="nc-produit-new" class="hidden">
+      <div class="alert alert-info mb-16"><span class="alert-icon">ℹ</span>Produit non trouvé — renseigner les informations ci-dessous pour le créer.</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nom du produit *</label>
+          <input type="text" id="nc-nom" placeholder="Ex: Bouteille isotherme 500ml noir">
+        </div>
+        <div class="form-group">
+          <label>Fournisseur principal</label>
+          <input type="text" id="nc-fournisseur" placeholder="Ex: AliExpress - Thermos Store">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="nc-notes" placeholder="Informations utiles sur ce produit…"></textarea>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="card-title mb-16">2. Commande</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date de commande *</label>
+        <input type="date" id="nc-date-commande">
+      </div>
+      <div class="form-group">
+        <label>Quantité commandée *</label>
+        <input type="number" id="nc-quantite" placeholder="Ex: 100" min="1">
+      </div>
+      <div class="form-group">
+        <label>Prix d'achat unitaire (€)</label>
+        <input type="number" id="nc-prix" placeholder="Ex: 4.50" step="0.01" min="0">
+        <div class="form-hint">Optionnel, purement informatif</div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="creerCycle()">Créer le cycle</button>
+      <button class="btn btn-secondary" onclick="showPage('dashboard')">Annuler</button>
     </div>
   </div>
 </div>
 
-<!-- ── SIDEBAR OVERLAY MOBILE ── -->
-<div id="sidebar-overlay" onclick="closeSidebar()"></div>
-
-<!-- ── MAIN LAYOUT ── -->
-<div id="app">
-
-  <!-- SIDEBAR -->
-  <aside id="sidebar">
-    <div class="sidebar-logo"><span>👗</span> Vinted Pro</div>
-    <nav class="sidebar-nav">
-      <div class="nav-item active" data-section="dashboard"><span class="nav-icon">📊</span> Tableau de bord</div>
-      <div class="nav-item" data-section="products"><span class="nav-icon">🏷️</span> Produits</div>
-      <div class="nav-item" data-section="monthly"><span class="nav-icon">📅</span> Suivi mensuel</div>
-      <div class="nav-item" data-section="analysis"><span class="nav-icon">🔍</span> Analyse</div>
-      <div class="nav-item" data-section="stock"><span class="nav-icon">📦</span> Stock</div>
-      <div class="nav-item" data-section="io"><span class="nav-icon">💾</span> Import / Export</div>
-    </nav>
-    <div class="sidebar-footer">
-      <small>Vinted Dashboard v1.0<br>Données stockées localement</small>
+<!-- PRODUITS -->
+<div id="page-produits" class="page">
+  <div class="flex justify-between items-center flex-wrap gap-8 mb-16">
+    <div class="section-title" style="margin-bottom:0">Produits</div>
+    <button class="btn btn-primary btn-sm" onclick="showEditProduit(null)">+ Nouveau produit</button>
+  </div>
+  <div class="card">
+    <div class="filter-bar mb-16">
+      <input type="text" id="prod-search" placeholder="Rechercher EAN, nom, fournisseur…" oninput="renderProduits()">
     </div>
-  </aside>
-
-  <!-- MAIN -->
-  <div id="main">
-    <!-- TOPBAR -->
-    <header id="topbar">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button id="menu-toggle" class="btn-icon" onclick="toggleSidebar()">☰</button>
-        <span id="topbar-title">Tableau de bord</span>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ Ajouter un produit</button>
-      </div>
-    </header>
-
-    <!-- CONTENT -->
-    <main id="content">
-
-      <!-- ═══════════════════════════════════════
-           SECTION DASHBOARD
-      ═══════════════════════════════════════ -->
-      <section id="s-dashboard" class="section active">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Tableau de bord</div>
-            <div class="section-subtitle">Vue globale de votre activité Vinted</div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <select class="select" id="db-period" style="width:auto;" onchange="renderDashboard()">
-              <option value="all">Toute la période</option>
-              <option value="month">Ce mois</option>
-              <option value="last30">30 derniers jours</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- KPI GRID -->
-        <div class="kpi-grid" id="kpi-grid"><!-- JS --></div>
-
-        <!-- OBJECTIF MENSUEL -->
-        <div class="progress-container" id="goal-progress"><!-- JS --></div>
-
-        <!-- CHARTS -->
-        <div class="charts-grid">
-          <div class="chart-card">
-            <div class="chart-title">Bénéfice net des 6 derniers mois</div>
-            <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Répartition par catégorie</div>
-            <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Statut des articles</div>
-            <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">CA vs Coûts (6 mois)</div>
-            <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
-          </div>
-        </div>
-
-        <!-- RECENT SALES -->
-        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Dernières ventes</div>
-        <div class="table-card">
-          <div class="table-scroll">
-            <table id="recent-sales-table"><tbody id="recent-sales-body"></tbody></table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════
-           SECTION PRODUITS
-      ═══════════════════════════════════════ -->
-      <section id="s-products" class="section">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Produits</div>
-            <div class="section-subtitle">Gérez l'ensemble de votre catalogue</div>
-          </div>
-          <button class="btn btn-primary" onclick="openProductModal()">+ Ajouter un produit</button>
-        </div>
-
-        <div class="table-card">
-          <div class="table-toolbar">
-            <input class="input search-input" id="prod-search" placeholder="🔍 Nom, marque…" oninput="renderProducts()">
-            <select class="select" id="prod-filter-cat" style="width:auto;" onchange="renderProducts()">
-              <option value="">Toutes catégories</option>
-              <option>chemise</option><option>t-shirt</option><option>veste</option>
-              <option>pantalon</option><option>short</option><option>chaussures</option>
-              <option>accessoire</option><option>autre</option>
-            </select>
-            <select class="select" id="prod-filter-status" style="width:auto;" onchange="renderProducts()">
-              <option value="">Tous statuts</option>
-              <option value="stock">En stock</option>
-              <option value="online">En ligne</option>
-              <option value="reserved">Réservé</option>
-              <option value="sold">Vendu</option>
-              <option value="unsold">Invendu</option>
-              <option value="returned">Retourné</option>
-            </select>
-            <select class="select" id="prod-sort" style="width:auto;" onchange="renderProducts()">
-              <option value="date_desc">Date achat ↓</option>
-              <option value="date_asc">Date achat ↑</option>
-              <option value="profit_desc">Bénéfice ↓</option>
-              <option value="margin_desc">Marge ↓</option>
-              <option value="name_asc">Nom A-Z</option>
-            </select>
-            <span id="prod-count" style="margin-left:auto;color:var(--text-muted);font-size:12px;"></span>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th class="td-photo"></th>
-                  <th>Nom</th>
-                  <th>Catégorie</th>
-                  <th>Marque</th>
-                  <th>Taille</th>
-                  <th>Statut</th>
-                  <th class="num">Achat</th>
-                  <th class="num">Vente</th>
-                  <th class="num">Bénéfice</th>
-                  <th class="num">Marge</th>
-                  <th class="num">ROI</th>
-                  <th>Durée</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="products-body"></tbody>
-            </table>
-          </div>
-          <div id="products-empty" class="empty-state" style="display:none;">
-            <div class="empty-icon">🏷️</div>
-            <p>Aucun produit trouvé.<br>Ajoutez votre premier article ou modifiez les filtres.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════
-           SECTION MENSUEL
-      ═══════════════════════════════════════ -->
-      <section id="s-monthly" class="section">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Suivi mensuel</div>
-            <div class="section-subtitle">Performance mois par mois</div>
-          </div>
-          <div class="month-nav">
-            <button onclick="changeMonth(-1)">←</button>
-            <span id="month-label"></span>
-            <button onclick="changeMonth(1)">→</button>
-          </div>
-        </div>
-
-        <div class="kpi-grid" id="monthly-kpi"><!-- JS --></div>
-        <div class="progress-container" id="monthly-goal"><!-- JS --></div>
-
-        <div class="charts-grid">
-          <div class="chart-card">
-            <div class="chart-title">Bénéfice net quotidien du mois</div>
-            <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Mix catégories vendues ce mois</div>
-            <div class="chart-wrap"><canvas id="chart-monthly-cat"></canvas></div>
-          </div>
-        </div>
-
-        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Articles vendus ce mois</div>
-        <div class="table-card">
-          <div class="table-scroll">
-            <table>
-              <thead><tr>
-                <th>Nom</th><th>Catégorie</th><th>Marque</th>
-                <th class="num">Achat</th><th class="num">Vendu</th>
-                <th class="num">Bénéfice</th><th class="num">Marge</th><th>Date vente</th>
-              </tr></thead>
-              <tbody id="monthly-sold-body"></tbody>
-            </table>
-          </div>
-          <div id="monthly-empty" class="empty-state" style="display:none;">
-            <div class="empty-icon">📅</div>
-            <p>Aucune vente enregistrée pour ce mois.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════
-           SECTION ANALYSE
-      ═══════════════════════════════════════ -->
-      <section id="s-analysis" class="section">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Analyse business</div>
-            <div class="section-subtitle">Insights automatiques pour optimiser votre activité</div>
-          </div>
-        </div>
-
-        <!-- ALERTS -->
-        <div id="analysis-alerts"></div>
-
-        <div class="analysis-grid" id="analysis-grid"><!-- JS --></div>
-
-        <div class="charts-grid">
-          <div class="chart-card">
-            <div class="chart-title">Bénéfice net par catégorie</div>
-            <div class="chart-wrap"><canvas id="chart-profit-cat"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Marge moyenne par marque (Top 8)</div>
-            <div class="chart-wrap"><canvas id="chart-margin-brand"></canvas></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════
-           SECTION STOCK
-      ═══════════════════════════════════════ -->
-      <section id="s-stock" class="section">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Gestion du stock</div>
-            <div class="section-subtitle">Articles disponibles et alertes</div>
-          </div>
-        </div>
-
-        <div class="kpi-grid" id="stock-kpi"><!-- JS --></div>
-
-        <!-- STOCK ALERTS -->
-        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">⚠️ Alertes stock dormant</div>
-        <div id="stock-alerts" style="margin-bottom:20px;"></div>
-
-        <!-- PAR CATEGORIE -->
-        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Articles par catégorie</div>
-        <div class="charts-grid" style="margin-bottom:20px;">
-          <div class="chart-card">
-            <div class="chart-title">Répartition du stock</div>
-            <div class="chart-wrap"><canvas id="chart-stock-cat"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Valeur estimée par catégorie</div>
-            <div class="chart-wrap"><canvas id="chart-stock-val"></canvas></div>
-          </div>
-        </div>
-
-        <div style="margin-bottom:8px;font-size:13px;font-weight:700;">Articles en stock / en ligne</div>
-        <div class="table-card">
-          <div class="table-toolbar">
-            <select class="select" id="stock-filter" style="width:auto;" onchange="renderStock()">
-              <option value="">Tout le stock</option>
-              <option value="30">Depuis + de 30 jours</option>
-              <option value="60">Depuis + de 60 jours</option>
-              <option value="90">Depuis + de 90 jours</option>
-            </select>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr>
-                <th>Nom</th><th>Catégorie</th><th>Marque</th><th>Statut</th>
-                <th class="num">Prix achat</th><th class="num">Prix vente</th>
-                <th>En stock depuis</th><th>Actions</th>
-              </tr></thead>
-              <tbody id="stock-body"></tbody>
-            </table>
-          </div>
-          <div id="stock-empty" class="empty-state" style="display:none;">
-            <div class="empty-icon">📦</div><p>Aucun article en stock.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════
-           SECTION IMPORT / EXPORT
-      ═══════════════════════════════════════ -->
-      <section id="s-io" class="section">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Import / Export</div>
-            <div class="section-subtitle">Sauvegardez et restaurez vos données</div>
-          </div>
-        </div>
-
-        <div class="alert alert-info" style="margin-bottom:20px;">
-          ℹ️ Toutes les données sont stockées localement dans votre navigateur (localStorage).
-          Exportez régulièrement vos données pour éviter toute perte.
-        </div>
-
-        <div class="io-grid">
-          <div class="io-card">
-            <div class="io-icon">📤</div>
-            <h3>Exporter JSON</h3>
-            <p>Sauvegarde complète de toutes vos données dans un fichier JSON.</p>
-            <button class="btn btn-primary" onclick="exportJSON()">Exporter JSON</button>
-          </div>
-          <div class="io-card">
-            <div class="io-icon">📥</div>
-            <h3>Importer JSON</h3>
-            <p>Restaurez vos données depuis un fichier JSON exporté précédemment.</p>
-            <input type="file" id="import-json-file" accept=".json" style="display:none;" onchange="importJSON(this)">
-            <button class="btn btn-secondary" onclick="document.getElementById('import-json-file').click()">Importer JSON</button>
-          </div>
-          <div class="io-card">
-            <div class="io-icon">📊</div>
-            <h3>Exporter CSV</h3>
-            <p>Exportez votre liste de produits au format CSV (compatible Excel).</p>
-            <button class="btn btn-success" onclick="exportCSV()">Exporter CSV</button>
-          </div>
-          <div class="io-card">
-            <div class="io-icon">📋</div>
-            <h3>Importer CSV</h3>
-            <p>Importez des produits depuis un fichier CSV. <a href="#" onclick="downloadCSVTemplate();return false;" style="color:var(--primary);">Télécharger le modèle</a></p>
-            <input type="file" id="import-csv-file" accept=".csv" style="display:none;" onchange="importCSV(this)">
-            <button class="btn btn-secondary" onclick="document.getElementById('import-csv-file').click()">Importer CSV</button>
-          </div>
-          <div class="io-card">
-            <div class="io-icon">🎯</div>
-            <h3>Objectif mensuel</h3>
-            <p>Définissez votre objectif de bénéfice mensuel.</p>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-              <input class="input" type="number" id="goal-input" placeholder="1000" style="width:100px;">
-              <span>€</span>
-              <button class="btn btn-primary btn-sm" onclick="saveGoal()">Sauver</button>
-            </div>
-          </div>
-          <div class="io-card">
-            <div class="io-icon">🗑️</div>
-            <h3>Réinitialiser</h3>
-            <p>Supprime toutes les données. Action irréversible.</p>
-            <button class="btn btn-danger" onclick="confirmReset()">Réinitialiser tout</button>
-          </div>
-        </div>
-
-        <!-- CSV FORMAT GUIDE -->
-        <div style="margin-top:24px;">
-          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Format CSV attendu</div>
-          <div class="table-card">
-            <div class="table-scroll" style="font-size:11px;padding:12px 16px;font-family:monospace;color:var(--text-muted);max-height:160px;">
-              nom,categorie,marque,taille,prixAchat,fraisAchat,prixVente,prixVendu,fraisVinted,fraisEmballage,fraisLivraison,dateAchat,dateMiseEnLigne,dateVente,statut,canal,commentaire<br>
-              "Chemise Oxford","chemise","Ralph Lauren","M","3","0.5","14","14","1.2","0.3","0","2024-01-15","2024-01-16","2024-01-20","sold","brocante","Belle chemise"
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </main><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /app -->
-
-<!-- ── TOAST CONTAINER ── -->
-<div id="toast-container"></div>
-
-<!-- ── PRODUCT MODAL ── -->
-<div class="modal-overlay" id="product-modal-overlay" onclick="maybeCloseModal(event)">
-  <div class="modal" id="product-modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">Ajouter un produit</div>
-      <button class="btn-icon" onclick="closeProductModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="f-id">
-      <div class="form-section">Informations générales</div>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Nom du produit *</label>
-          <input class="input" id="f-name" placeholder="Ex : Chemise Oxford bleue">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Catégorie *</label>
-          <select class="select" id="f-category">
-            <option value="">— Choisir —</option>
-            <option>chemise</option><option>t-shirt</option><option>veste</option>
-            <option>pantalon</option><option>short</option><option>chaussures</option>
-            <option>accessoire</option><option>autre</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Marque</label>
-          <input class="input" id="f-brand" placeholder="Ex : Zara, H&M…">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Taille</label>
-          <input class="input" id="f-size" placeholder="Ex : M, 40, 42…">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Statut *</label>
-          <select class="select" id="f-status">
-            <option value="stock">En stock</option>
-            <option value="online">En ligne</option>
-            <option value="reserved">Réservé</option>
-            <option value="sold">Vendu</option>
-            <option value="unsold">Invendu</option>
-            <option value="returned">Retourné</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Canal d'achat</label>
-          <select class="select" id="f-channel">
-            <option value="">— Choisir —</option>
-            <option value="brocante">Brocante</option>
-            <option value="friperie">Friperie</option>
-            <option value="lot">Lot</option>
-            <option value="particulier">Particulier</option>
-            <option value="autre">Autre</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-section">Prix & Frais</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Prix d'achat (€) *</label>
-          <input class="input" type="number" step="0.01" id="f-purchasePrice" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Frais d'achat (€)</label>
-          <input class="input" type="number" step="0.01" id="f-purchaseFees" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Prix de mise en vente (€)</label>
-          <input class="input" type="number" step="0.01" id="f-listingPrice" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Prix vendu (€)</label>
-          <input class="input" type="number" step="0.01" id="f-soldPrice" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Frais Vinted (€)</label>
-          <input class="input" type="number" step="0.01" id="f-vintedFees" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Frais d'emballage (€)</label>
-          <input class="input" type="number" step="0.01" id="f-packagingFees" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Frais livraison à ma charge (€)</label>
-          <input class="input" type="number" step="0.01" id="f-shippingFees" placeholder="0.00">
-        </div>
-      </div>
-
-      <!-- Aperçu calcul -->
-      <div id="calc-preview" style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:4px;font-size:12px;display:none;">
-        <div style="font-weight:700;margin-bottom:6px;">Aperçu rentabilité</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-          <span>Coût total :</span><span id="prev-cost" style="font-weight:600;"></span>
-          <span>Bénéfice net :</span><span id="prev-profit" style="font-weight:700;"></span>
-          <span>Marge nette :</span><span id="prev-margin"></span>
-          <span>ROI :</span><span id="prev-roi"></span>
-        </div>
-      </div>
-
-      <div class="form-section">Dates</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Date d'achat</label>
-          <input class="input" type="date" id="f-purchaseDate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Date de mise en ligne</label>
-          <input class="input" type="date" id="f-listingDate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Date de vente</label>
-          <input class="input" type="date" id="f-saleDate">
-        </div>
-      </div>
-
-      <div class="form-section">Photo & Notes</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">URL de la photo</label>
-          <input class="input" id="f-photo" placeholder="https://...">
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Commentaire</label>
-          <textarea class="textarea" id="f-comment" rows="2" placeholder="Notes internes…"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeProductModal()">Annuler</button>
-      <button class="btn btn-primary" onclick="saveProduct()">Enregistrer</button>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>EAN</th><th>Nom</th><th>Fournisseur</th><th>Cycles</th><th>Dernier cycle</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="produits-tbody"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     JAVASCRIPT
-═══════════════════════════════════════════════════════════ -->
+<!-- PRODUIT DETAIL -->
+<div id="page-produit-detail" class="page">
+  <button class="back-link" onclick="showPage('produits')">← Retour aux produits</button>
+  <div id="produit-detail-content"></div>
+</div>
+
+<!-- IMPORT CSV -->
+<div id="page-import" class="page">
+  <div class="section-title">Import CSV des ventes</div>
+  <div class="card">
+    <div class="card-title mb-16">Importer un fichier de ventes</div>
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="csv-file-input" accept=".csv,.txt" onchange="handleFileSelect(this.files[0])">
+      <div class="drop-zone-icon">📂</div>
+      <div class="drop-zone-text"><strong>Cliquer pour choisir</strong> ou glisser-déposer un fichier CSV</div>
+      <div style="font-size:12px;color:var(--gray-400);margin-top:8px">Format : colonnes EAN, quantité vendue, date — noms flexibles</div>
+    </div>
+  </div>
+
+  <div id="import-mapping-section" class="hidden">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Correspondance des colonnes</div>
+        <button class="btn btn-ghost btn-sm" onclick="resetImport()">✕ Annuler</button>
+      </div>
+      <div id="import-mapping-content"></div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="previewImport()">Prévisualiser →</button>
+        <button class="btn btn-secondary" onclick="resetImport()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="import-preview-section" class="hidden">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Aperçu de l'import</div>
+        <span id="import-preview-filename" class="font-mono" style="font-size:12px;color:var(--gray-500)"></span>
+      </div>
+      <div id="import-anomalies-preview"></div>
+      <div class="preview-table-wrap">
+        <table id="import-preview-table">
+          <thead><tr id="import-preview-head"></tr></thead>
+          <tbody id="import-preview-body"></tbody>
+        </table>
+      </div>
+      <div id="import-preview-stats" style="font-size:12px;color:var(--gray-500);margin-top:8px"></div>
+      <div class="form-actions">
+        <button class="btn btn-success" onclick="validerImport()">✓ Valider l'import</button>
+        <button class="btn btn-secondary" onclick="goToMapping()">← Modifier le mapping</button>
+        <button class="btn btn-ghost" onclick="resetImport()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <div class="card-title mb-16">Historique des imports</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Fichier</th><th>Lignes</th><th>EAN distincts</th><th>Anomalies</th><th></th></tr>
+        </thead>
+        <tbody id="imports-history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="page-settings" class="page">
+  <div class="section-title">Gestion des données</div>
+
+  <div class="card">
+    <div class="card-title mb-16">Export de sauvegarde</div>
+    <p style="color:var(--gray-600);margin-bottom:16px;font-size:13px">Exporter toutes les données (produits, cycles, imports) dans un fichier JSON, ou les cycles seuls en CSV.</p>
+    <div class="flex gap-8 flex-wrap">
+      <button class="btn btn-primary" onclick="exportJSON()">⬇ Export JSON complet</button>
+      <button class="btn btn-secondary" onclick="exportCyclesCSV()">⬇ Export cycles CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title mb-16">Restauration depuis JSON</div>
+    <p style="color:var(--gray-600);margin-bottom:16px;font-size:13px">Restaurer depuis un fichier JSON exporté. <strong>Attention : remplace toutes les données actuelles.</strong></p>
+    <input type="file" id="restore-file" accept=".json" onchange="importJSON(this)" style="max-width:320px">
+  </div>
+
+  <div class="card">
+    <div class="card-title mb-16">Paramètres des alertes</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Durée max. d'un cycle (jours)</label>
+        <input type="number" id="param-max-jours" min="1" max="365" value="60" oninput="saveParams()">
+        <div class="form-hint">Alerte rouge si cycle dépasse ce seuil</div>
+      </div>
+      <div class="form-group">
+        <label>Étape bloquée après (jours)</label>
+        <input type="number" id="param-bloque-jours" min="1" max="60" value="14" oninput="saveParams()">
+        <div class="form-hint">Alerte orange si aucun changement d'état</div>
+      </div>
+      <div class="form-group">
+        <label>Alerte stock bas (semaines)</label>
+        <input type="number" id="param-stock-semaines" min="1" max="20" value="3" oninput="saveParams()">
+        <div class="form-hint">Alerte si stock estimé inférieur à ce seuil</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border: 2px solid var(--danger-light)">
+    <div class="card-title mb-16" style="color:var(--danger)">⚠ Zone dangereuse</div>
+    <p style="color:var(--gray-600);margin-bottom:16px;font-size:13px">Supprime irrémédiablement toutes les données stockées dans ce navigateur.</p>
+    <button class="btn btn-danger" onclick="confirmerReset()">🗑 Réinitialiser toutes les données</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-backdrop" class="modal-backdrop hidden" onclick="closeModalBackdrop(event)">
+  <div class="modal" id="modal-content"></div>
+</div>
+
 <script>
-'use strict';
+// ============================================================
+// STATE & STORAGE
+// ============================================================
+const STORAGE_KEY = 'fba_tracker_v1';
 
-// ── CONSTANTS ──────────────────────────────────────────────
-const LS_PRODUCTS = 'vinted_products';
-const LS_SETTINGS = 'vinted_settings';
-const MONTHLY_GOAL_DEFAULT = 1000;
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : defaultData();
+  } catch(e) { return defaultData(); }
+}
 
-const STATUS_LABELS = {
-  stock: 'En stock', online: 'En ligne', reserved: 'Réservé',
-  sold: 'Vendu', unsold: 'Invendu', returned: 'Retourné'
-};
-const CHANNEL_LABELS = {
-  brocante: 'Brocante', friperie: 'Friperie', lot: 'Lot',
-  particulier: 'Particulier', autre: 'Autre'
-};
+function defaultData() {
+  return { produits: [], cycles: [], imports: [], params: { maxJours: 60, bloqueJours: 14, stockSemaines: 3 } };
+}
 
-// ── STATE ──────────────────────────────────────────────────
-let products = [];
-let settings = { monthlyGoal: MONTHLY_GOAL_DEFAULT };
-let currentMonth = new Date();   // For monthly view
-let charts = {};                  // Chart.js instances
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
 
-// ── UTILS ─────────────────────────────────────────────────
-const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const fmt  = v => v == null || isNaN(v) ? '—' : v.toFixed(2) + ' €';
-const fmtP = v => v == null || isNaN(v) ? '—' : v.toFixed(1) + ' %';
-const n    = v => parseFloat(v) || 0;
+let db = loadData();
 
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if ((b.getAttribute('onclick') || '').includes("'" + name + "'")) b.classList.add('active');
+  });
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'produits') renderProduits();
+  if (name === 'import') renderImportHistory();
+  if (name === 'settings') renderSettings();
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function today() { return new Date().toISOString().split('T')[0]; }
 function daysBetween(d1, d2) {
   if (!d1 || !d2) return null;
-  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
+  return Math.floor((new Date(d2) - new Date(d1)) / 86400000);
 }
-function daysAgo(dateStr) {
-  if (!dateStr) return null;
-  return Math.round((Date.now() - new Date(dateStr)) / 86400000);
-}
+function daysFromToday(d) { return d ? daysBetween(d, today()) : null; }
 function fmtDate(d) {
   if (!d) return '—';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
 }
-function monthKey(date) {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+function fmtNum(n) { return (n === null || n === undefined) ? '—' : Number(n).toLocaleString('fr-FR'); }
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function profitClass(v) {
-  if (v == null || isNaN(v)) return 'profit-neu';
-  return v > 0 ? 'profit-pos' : v < 0 ? 'profit-neg' : 'profit-neu';
+function escAttr(s) { return String(s || '').replace(/"/g,'&quot;'); }
+
+function getProduit(ean) { return db.produits.find(p => p.ean === ean); }
+function getCycleActif(ean) { return db.cycles.find(c => c.ean === ean && c.statut !== 'termine'); }
+
+const STATUTS = ['commande','recu_etiquete','envoye_amazon','en_vente','termine'];
+const STATUT_LABELS = { commande:'Commandé', recu_etiquete:'Reçu & étiqueté', envoye_amazon:'Envoyé Amazon', en_vente:'En vente', termine:'Terminé' };
+const STATUT_ICONS = { commande:'🛒', recu_etiquete:'📦', envoye_amazon:'🚚', en_vente:'🟢', termine:'✅' };
+const STATUT_BADGE_CLASS = { commande:'badge-commande', recu_etiquete:'badge-recu', envoye_amazon:'badge-envoye', en_vente:'badge-vente', termine:'badge-termine' };
+
+function statutBadge(s) {
+  return `<span class="badge ${STATUT_BADGE_CLASS[s]||''}">${STATUT_ICONS[s]||''} ${STATUT_LABELS[s]||s}</span>`;
+}
+function nextStatut(s) {
+  const idx = STATUTS.indexOf(s);
+  return (idx >= 0 && idx < STATUTS.length - 1) ? STATUTS[idx + 1] : null;
 }
 
-// ── CALCULATIONS ───────────────────────────────────────────
-function calcProduct(p) {
-  const cost   = n(p.purchasePrice) + n(p.purchaseFees) + n(p.packagingFees) + n(p.shippingFees);
-  const isSold = p.status === 'sold' && n(p.soldPrice) > 0;
-  const profit = isSold ? n(p.soldPrice) - cost - n(p.vintedFees) : null;
-  const margin = (isSold && n(p.soldPrice) > 0) ? profit / n(p.soldPrice) * 100 : null;
-  const roi    = (isSold && cost > 0)           ? profit / cost * 100           : null;
-  const duration = daysBetween(p.listingDate, p.saleDate);
-  return { cost, profit, margin, roi, duration };
+function calcVitesseVente(cycle) {
+  if (!['en_vente','termine'].includes(cycle.statut) || !cycle.date_mise_en_vente) return null;
+  const j = daysFromToday(cycle.date_mise_en_vente);
+  if (!j || j <= 0) return null;
+  const vendu = (cycle.quantite_envoyee_amazon || 0) - (cycle.stock_disponible || 0);
+  return vendu > 0 ? vendu / j : 0;
 }
 
-// ── LOAD / SAVE ────────────────────────────────────────────
-function load() {
-  try { products = JSON.parse(localStorage.getItem(LS_PRODUCTS)) || []; } catch { products = []; }
-  try { settings = { ...settings, ...JSON.parse(localStorage.getItem(LS_SETTINGS)) }; } catch {}
-}
-function save() {
-  localStorage.setItem(LS_PRODUCTS, JSON.stringify(products));
-  localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+function calcSemainesStock(cycle) {
+  const v = calcVitesseVente(cycle);
+  if (!v || v <= 0) return null;
+  return (cycle.stock_disponible || 0) / (v * 7);
 }
 
-// ── SAMPLE DATA ────────────────────────────────────────────
-function loadSampleData() {
-  const today = new Date();
-  const d = (offset) => {
-    const dt = new Date(today);
-    dt.setDate(dt.getDate() - offset);
-    return dt.toISOString().slice(0,10);
-  };
-  products = [
-    {
-      id: uid(), name: 'Chemise Oxford bleue', category: 'chemise', brand: 'Ralph Lauren',
-      size: 'M', purchasePrice: 3, purchaseFees: 0.5, listingPrice: 14, soldPrice: 14,
-      vintedFees: 1.2, packagingFees: 0.3, shippingFees: 0,
-      purchaseDate: d(40), listingDate: d(38), saleDate: d(32), status: 'sold',
-      channel: 'brocante', comment: 'Belle chemise, vendue rapidement', photo: ''
-    },
-    {
-      id: uid(), name: 'T-shirt Nike blanc', category: 't-shirt', brand: 'Nike',
-      size: 'L', purchasePrice: 2, purchaseFees: 0, listingPrice: 10, soldPrice: 10,
-      vintedFees: 0.8, packagingFees: 0.2, shippingFees: 0,
-      purchaseDate: d(35), listingDate: d(33), saleDate: d(25), status: 'sold',
-      channel: 'friperie', comment: '', photo: ''
-    },
-    {
-      id: uid(), name: 'Veste en cuir noir', category: 'veste', brand: 'Zara',
-      size: 'S', purchasePrice: 8, purchaseFees: 0, listingPrice: 28, soldPrice: 28,
-      vintedFees: 2.5, packagingFees: 0.5, shippingFees: 0,
-      purchaseDate: d(60), listingDate: d(58), saleDate: d(15), status: 'sold',
-      channel: 'brocante', comment: 'Super article, bonne marge', photo: ''
-    },
-    {
-      id: uid(), name: 'Short Levi\'s beige', category: 'short', brand: 'Levi\'s',
-      size: '38', purchasePrice: 4, purchaseFees: 0.5, listingPrice: 12, soldPrice: 0,
-      vintedFees: 0, packagingFees: 0, shippingFees: 0,
-      purchaseDate: d(25), listingDate: '', saleDate: '', status: 'stock',
-      channel: 'lot', comment: 'Acheté dans un lot de 5 pièces', photo: ''
-    },
-    {
-      id: uid(), name: 'Chemise à carreaux', category: 'chemise', brand: 'H&M',
-      size: 'XL', purchasePrice: 5, purchaseFees: 0, listingPrice: 18, soldPrice: 0,
-      vintedFees: 0, packagingFees: 0, shippingFees: 0,
-      purchaseDate: d(18), listingDate: d(16), saleDate: '', status: 'online',
-      channel: 'particulier', comment: 'En attente d\'acheteur', photo: ''
-    }
-  ];
-  save();
+function getLastStatusDate(cycle) {
+  for (const k of ['date_mise_en_vente','date_envoi_amazon','date_reception','date_commande']) {
+    if (cycle[k]) return cycle[k];
+  }
+  return null;
 }
 
-// ── NAVIGATION ─────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    const s = item.dataset.section;
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.section').forEach(n => n.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById(`s-${s}`).classList.add('active');
-    document.getElementById('topbar-title').textContent = item.textContent.trim();
-    closeSidebar();
-    renderSection(s);
-  });
-});
-
-function renderSection(s) {
-  if (s === 'dashboard') renderDashboard();
-  else if (s === 'products') renderProducts();
-  else if (s === 'monthly')  renderMonthly();
-  else if (s === 'analysis') renderAnalysis();
-  else if (s === 'stock')    renderStock();
-  else if (s === 'io')       renderIO();
+function getAlertesCycle(cycle) {
+  const p = db.params || { maxJours:60, bloqueJours:14, stockSemaines:3 };
+  const alerts = [];
+  const j = daysFromToday(cycle.date_commande);
+  if (j !== null && j >= p.maxJours) alerts.push({ level:'danger', msg:`Cycle en cours depuis ${j}j (limite : ${p.maxJours}j)` });
+  const ld = getLastStatusDate(cycle);
+  if (ld) {
+    const jb = daysFromToday(ld);
+    if (jb !== null && jb >= p.bloqueJours) alerts.push({ level:'warning', msg:`Étape "${STATUT_LABELS[cycle.statut]}" inchangée depuis ${jb}j` });
+  }
+  if (cycle.statut === 'en_vente') {
+    const sem = calcSemainesStock(cycle);
+    if (sem !== null && sem < p.stockSemaines) alerts.push({ level:'warning', msg:`Stock estimé à ${sem.toFixed(1)} sem. — relancer un cycle ?` });
+  }
+  return alerts;
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebar-overlay').classList.toggle('open');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('open');
+function getStatutDate(cycle, s) {
+  return { commande:cycle.date_commande, recu_etiquete:cycle.date_reception, envoye_amazon:cycle.date_envoi_amazon, en_vente:cycle.date_mise_en_vente, termine:cycle.date_cloture }[s] || null;
 }
 
-// ── CHARTS HELPERS ─────────────────────────────────────────
-function destroyChart(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-}
-function createChart(id, config) {
-  destroyChart(id);
-  const ctx = document.getElementById(id);
-  if (!ctx) return;
-  charts[id] = new Chart(ctx, config);
-}
+// ============================================================
+// DASHBOARD
+// ============================================================
+let dashActiveFilter = 'tous';
 
-const COLORS = ['#2563eb','#16a34a','#dc2626','#ea580c','#ca8a04','#7c3aed','#0891b2','#db2777'];
-const ALPHA  = c => c + '33';
-
-// ── DASHBOARD ──────────────────────────────────────────────
 function renderDashboard() {
-  const period   = document.getElementById('db-period').value;
-  const filtered = filterByPeriod(products, period);
-  const sold     = filtered.filter(p => p.status === 'sold');
-  const stock    = products.filter(p => ['stock','online','reserved'].includes(p.status));
+  const search = (document.getElementById('dash-search')?.value || '').toLowerCase();
+  const sort = document.getElementById('dash-sort')?.value || 'jours_desc';
+  let cycles = db.cycles.filter(c => c.statut !== 'termine');
 
-  const ca        = sold.reduce((s,p) => s + n(p.soldPrice), 0);
-  const totalCost = sold.reduce((s,p) => s + calcProduct(p).cost, 0);
-  const netProfit = sold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
-  const invested  = products.reduce((s,p) => s + n(p.purchasePrice) + n(p.purchaseFees), 0);
-  const avgMargin = sold.length
-    ? sold.reduce((s,p) => s + (calcProduct(p).margin ?? 0), 0) / sold.length : 0;
-  const avgBasket = sold.length ? ca / sold.length : 0;
-  const avgProfit = sold.length ? netProfit / sold.length : 0;
-  const roiGlobal = totalCost > 0 ? netProfit / totalCost * 100 : 0;
-  const stockVal  = stock.reduce((s,p) => s + n(p.listingPrice || p.purchasePrice), 0);
+  // Stats
+  const total = cycles.length;
+  const enVente = cycles.filter(c => c.statut === 'en_vente').length;
+  const maxJ = db.params?.maxJours || 60;
+  const alertes60 = cycles.filter(c => { const j = daysFromToday(c.date_commande); return j !== null && j >= maxJ; }).length;
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Cycles actifs</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--success)">${enVente}</div><div class="stat-label">En vente</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:${alertes60>0?'var(--danger)':'var(--gray-900)'}">${alertes60}</div><div class="stat-label">Alertes ${maxJ}j</div></div>
+    <div class="stat-card"><div class="stat-value">${db.produits.length}</div><div class="stat-label">Produits</div></div>
+  `;
 
-  const kpis = [
-    { label: "Chiffre d'affaires", value: fmt(ca), sub: `${sold.length} vente${sold.length>1?'s':''}`, cls: 'blue' },
-    { label: "Bénéfice net", value: fmt(netProfit), sub: '', cls: netProfit >= 0 ? 'green' : 'red' },
-    { label: "Marge moyenne", value: fmtP(avgMargin), sub: '', cls: avgMargin >= 20 ? 'green' : '' },
-    { label: "ROI global", value: fmtP(roiGlobal), sub: '', cls: roiGlobal >= 50 ? 'green' : '' },
-    { label: "Articles vendus", value: sold.length, sub: period === 'all' ? 'total' : '' },
-    { label: "Articles en stock", value: stock.length, sub: `val. ~${fmt(stockVal)}`, cls: '' },
-    { label: "Montant investi", value: fmt(invested), sub: 'tous achats' },
-    { label: "Panier moyen", value: fmt(avgBasket), sub: '' },
-    { label: "Bénéf. moyen/vente", value: fmt(avgProfit), sub: '', cls: avgProfit >= 5 ? 'green' : '' },
-    { label: "Valeur stock estimée", value: fmt(stockVal), sub: 'au prix de vente' },
-  ];
-
-  document.getElementById('kpi-grid').innerHTML = kpis.map(k =>
-    `<div class="kpi-card ${k.cls||''}">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ''}
-    </div>`
-  ).join('');
-
-  // Goal progress (current month)
-  const thisMonthSold = products.filter(p => p.status === 'sold' && p.saleDate &&
-    p.saleDate.startsWith(monthKey(new Date())));
-  const monthProfit = thisMonthSold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
-  const goal    = settings.monthlyGoal;
-  const pct     = Math.min(100, (monthProfit / goal * 100));
-  const pctDisp = pct.toFixed(1);
-  document.getElementById('goal-progress').innerHTML = `
-    <div class="progress-header">
-      <span class="progress-label">🎯 Objectif mensuel — ${fmt(goal)}</span>
-      <span class="progress-pct">${fmt(monthProfit)} / ${fmt(goal)} (${pctDisp} %)</span>
-    </div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill ${pct >= 100 ? 'green' : ''}" style="width:${pct}%"></div>
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
-      ${pct >= 100 ? '🎉 Objectif atteint !' : `Il reste ${fmt(goal - monthProfit)} à réaliser ce mois-ci.`}
-    </div>`;
-
-  // Charts
-  renderMonthlyChart();
-  renderCategoryChart();
-  renderStatusChart();
-  renderRevenueChart();
-  renderRecentSales();
-}
-
-function filterByPeriod(arr, period) {
-  if (period === 'month') {
-    const mk = monthKey(new Date());
-    return arr.filter(p => p.saleDate && p.saleDate.startsWith(mk));
-  }
-  if (period === 'last30') {
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-    return arr.filter(p => p.saleDate && new Date(p.saleDate) >= cutoff);
-  }
-  return arr;
-}
-
-function getLast6Months() {
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
-    months.push(monthKey(d));
-  }
-  return months;
-}
-
-function renderMonthlyChart() {
-  const months = getLast6Months();
-  const profits = months.map(mk => {
-    const sold = products.filter(p => p.status === 'sold' && p.saleDate && p.saleDate.startsWith(mk));
-    return sold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
-  });
-  const labels = months.map(mk => {
-    const [y,m] = mk.split('-');
-    return new Date(y, m-1).toLocaleDateString('fr-FR', { month:'short', year:'2-digit' });
-  });
-  createChart('chart-monthly', {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Bénéfice net (€)', data: profits,
-      backgroundColor: profits.map(v => v >= 0 ? '#16a34a88' : '#dc262688'),
-      borderColor: profits.map(v => v >= 0 ? '#16a34a' : '#dc2626'),
-      borderWidth: 1.5, borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => v + '€' }, grid: { color: '#e2e4e9' } },
-                x: { grid: { display: false } } } }
-  });
-}
-
-function renderCategoryChart() {
-  const cats = {};
-  products.filter(p => p.status === 'sold').forEach(p => {
-    cats[p.category || 'autre'] = (cats[p.category || 'autre'] || 0) + 1;
-  });
-  const labels = Object.keys(cats);
-  const data   = Object.values(cats);
-  createChart('chart-category', {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
-      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
-  });
-}
-
-function renderStatusChart() {
-  const counts = {};
-  products.forEach(p => { counts[p.status] = (counts[p.status] || 0) + 1; });
-  const labels = Object.keys(counts).map(k => STATUS_LABELS[k] || k);
-  createChart('chart-status', {
-    type: 'pie',
-    data: { labels, datasets: [{ data: Object.values(counts),
-      backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
-  });
-}
-
-function renderRevenueChart() {
-  const months = getLast6Months();
-  const ca    = months.map(mk => products.filter(p=>p.status==='sold'&&p.saleDate?.startsWith(mk))
-                                          .reduce((s,p)=>s+n(p.soldPrice),0));
-  const costs = months.map(mk => products.filter(p=>p.status==='sold'&&p.saleDate?.startsWith(mk))
-                                          .reduce((s,p)=>s+calcProduct(p).cost+n(p.vintedFees),0));
-  const labels = months.map(mk => {
-    const [y,m] = mk.split('-');
-    return new Date(y,m-1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});
-  });
-  createChart('chart-revenue', {
-    type: 'line',
-    data: { labels, datasets: [
-      { label: 'CA (€)', data: ca, borderColor: '#2563eb', backgroundColor: '#2563eb22',
-        fill: true, tension: .3, pointRadius: 4 },
-      { label: 'Coûts (€)', data: costs, borderColor: '#dc2626', backgroundColor: '#dc262622',
-        fill: true, tension: .3, pointRadius: 4 }
-    ]},
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 12 } } },
-      scales: { y: { ticks: { callback: v => v+'€' } } } }
-  });
-}
-
-function renderRecentSales() {
-  const sold = products.filter(p => p.status === 'sold' && p.saleDate)
-    .sort((a,b) => new Date(b.saleDate) - new Date(a.saleDate)).slice(0, 8);
-  const tbody = document.getElementById('recent-sales-body');
-  if (!sold.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-icon">📦</div><p>Aucune vente enregistrée.</p></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = sold.map(p => {
-    const c = calcProduct(p);
-    return `<tr>
-      <td>${photoCell(p)}</td>
-      <td><b>${esc(p.name)}</b></td>
-      <td>${esc(p.brand||'—')}</td>
-      <td class="num">${fmt(n(p.soldPrice))}</td>
-      <td class="num ${profitClass(c.profit)}">${c.profit != null ? fmt(c.profit) : '—'}</td>
-      <td class="num">${c.margin != null ? fmtP(c.margin) : '—'}</td>
-      <td>${fmtDate(p.saleDate)}</td>
-    </tr>`;
+  // Filter chips
+  const statuts = ['tous', ...STATUTS.filter(s => s !== 'termine')];
+  document.getElementById('dash-filter-chips').innerHTML = statuts.map(s => {
+    const count = s === 'tous' ? cycles.length : cycles.filter(c => c.statut === s).length;
+    return `<button class="filter-chip ${dashActiveFilter === s ? 'active' : ''}" onclick="setDashFilter('${s}')">${s==='tous'?'Tous':STATUT_LABELS[s]} (${count})</button>`;
   }).join('');
-  const thead = `<thead><tr>
-    <th class="td-photo"></th><th>Nom</th><th>Marque</th>
-    <th class="num">Prix vendu</th><th class="num">Bénéfice</th>
-    <th class="num">Marge</th><th>Date</th>
-  </tr></thead>`;
-  document.querySelector('#recent-sales-table').innerHTML = thead + `<tbody>${tbody.innerHTML}</tbody>`;
-}
 
-// ── PRODUCTS ──────────────────────────────────────────────
-function renderProducts() {
-  const search = document.getElementById('prod-search').value.toLowerCase();
-  const cat    = document.getElementById('prod-filter-cat').value;
-  const status = document.getElementById('prod-filter-status').value;
-  const sort   = document.getElementById('prod-sort').value;
-
-  let list = products.filter(p => {
-    if (cat    && p.category !== cat) return false;
-    if (status && p.status   !== status) return false;
-    if (search && !( (p.name||'').toLowerCase().includes(search) ||
-                     (p.brand||'').toLowerCase().includes(search))) return false;
-    return true;
+  if (dashActiveFilter !== 'tous') cycles = cycles.filter(c => c.statut === dashActiveFilter);
+  if (search) cycles = cycles.filter(c => {
+    const p = getProduit(c.ean);
+    return c.ean.includes(search) || (p && p.nom.toLowerCase().includes(search));
   });
 
-  list = list.slice().sort((a,b) => {
-    if (sort === 'date_desc') return (b.purchaseDate||'') > (a.purchaseDate||'') ? 1 : -1;
-    if (sort === 'date_asc')  return (a.purchaseDate||'') > (b.purchaseDate||'') ? 1 : -1;
-    if (sort === 'profit_desc') return (calcProduct(b).profit??-999) - (calcProduct(a).profit??-999);
-    if (sort === 'margin_desc') return (calcProduct(b).margin??-999) - (calcProduct(a).margin??-999);
-    if (sort === 'name_asc')  return (a.name||'').localeCompare(b.name||'');
+  cycles.sort((a, b) => {
+    if (sort === 'jours_asc') return (daysFromToday(a.date_commande)||0) - (daysFromToday(b.date_commande)||0);
+    if (sort === 'jours_desc') return (daysFromToday(b.date_commande)||0) - (daysFromToday(a.date_commande)||0);
+    if (sort === 'statut') return STATUTS.indexOf(a.statut) - STATUTS.indexOf(b.statut);
+    if (sort === 'stock') return (calcSemainesStock(a)||999) - (calcSemainesStock(b)||999);
     return 0;
   });
 
-  document.getElementById('prod-count').textContent = `${list.length} article${list.length !== 1 ? 's' : ''}`;
-  const tbody = document.getElementById('products-body');
-  const empty = document.getElementById('products-empty');
+  const dangerCycles = cycles.filter(c => getAlertesCycle(c).some(a => a.level === 'danger'));
+  document.getElementById('dash-alerts').innerHTML = dangerCycles.length > 0
+    ? `<div class="alert alert-danger"><span class="alert-icon">🚨</span><div><strong>${dangerCycles.length} cycle(s) dépassent la durée maximale de ${maxJ} jours.</strong><br>Vérifiez les cartes marquées.</div></div>`
+    : '';
 
-  if (!list.length) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
+  const container = document.getElementById('dash-cycles');
+  if (cycles.length === 0) {
+    container.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center"><p class="text-muted">Aucun cycle actif${search?' pour cette recherche':''}.</p><br><button class="btn btn-primary" onclick="showNouveauCycle()">+ Créer un cycle</button></div>`;
     return;
   }
-  empty.style.display = 'none';
-  tbody.innerHTML = list.map(p => {
-    const c = calcProduct(p);
-    const dur = c.duration != null ? c.duration + 'j' : '—';
-    return `<tr>
-      <td class="td-photo">${photoCell(p)}</td>
-      <td><b>${esc(p.name)}</b><br><small style="color:var(--text-muted)">${esc(p.size||'')}</small></td>
-      <td>${esc(p.category||'—')}</td>
-      <td>${esc(p.brand||'—')}</td>
-      <td>${esc(p.size||'—')}</td>
-      <td>${statusBadge(p.status)}</td>
-      <td class="num">${fmt(n(p.purchasePrice) + n(p.purchaseFees))}</td>
-      <td class="num">${p.soldPrice ? fmt(n(p.soldPrice)) : (p.listingPrice ? fmt(n(p.listingPrice))+'*' : '—')}</td>
-      <td class="num ${profitClass(c.profit)}">${c.profit != null ? fmt(c.profit) : '—'}</td>
-      <td class="num">${c.margin != null ? fmtP(c.margin) : '—'}</td>
-      <td class="num">${c.roi != null ? fmtP(c.roi) : '—'}</td>
-      <td>${dur}</td>
-      <td><div class="action-cell">
-        <button class="btn-icon" title="Modifier" onclick="editProduct('${p.id}')">✏️</button>
-        <button class="btn-icon" title="Dupliquer" onclick="dupeProduct('${p.id}')">📋</button>
-        <button class="btn-icon" title="Supprimer" onclick="deleteProduct('${p.id}')">🗑️</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-}
 
-function photoCell(p) {
-  if (p.photo) return `<img src="${esc(p.photo)}" class="product-photo" onerror="this.style.display='none'">`;
-  return `<div class="photo-placeholder">👗</div>`;
-}
-function statusBadge(s) {
-  return `<span class="badge badge-${s}">${STATUS_LABELS[s]||s}</span>`;
-}
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+  container.innerHTML = cycles.map(c => {
+    const prod = getProduit(c.ean);
+    const nom = prod ? prod.nom : c.ean;
+    const j = daysFromToday(c.date_commande);
+    const alertes = getAlertesCycle(c);
+    const hasDanger = alertes.some(a => a.level === 'danger');
+    const hasWarn = alertes.some(a => a.level === 'warning');
+    const vitesse = calcVitesseVente(c);
+    const semaines = calcSemainesStock(c);
+    const jClass = j !== null ? (j >= maxJ ? 'danger' : j >= maxJ*0.8 ? 'warning' : '') : '';
+    const sClass = semaines !== null ? (semaines < 2 ? 'danger' : semaines < (db.params?.stockSemaines||3) ? 'warning' : 'success') : '';
+    let cardClass = `cycle-card status-${c.statut}`;
+    if (hasDanger) cardClass += ' alert-60j';
+    else if (hasWarn) cardClass += ' alert-bloque';
 
-// ── PRODUCT MODAL ─────────────────────────────────────────
-function openProductModal(id) {
-  clearForm();
-  document.getElementById('modal-title').textContent = id ? 'Modifier le produit' : 'Ajouter un produit';
-  if (id) {
-    const p = products.find(x => x.id === id);
-    if (!p) return;
-    document.getElementById('f-id').value            = p.id;
-    document.getElementById('f-name').value          = p.name || '';
-    document.getElementById('f-category').value      = p.category || '';
-    document.getElementById('f-brand').value         = p.brand || '';
-    document.getElementById('f-size').value          = p.size || '';
-    document.getElementById('f-status').value        = p.status || 'stock';
-    document.getElementById('f-channel').value       = p.channel || '';
-    document.getElementById('f-purchasePrice').value = p.purchasePrice || '';
-    document.getElementById('f-purchaseFees').value  = p.purchaseFees || '';
-    document.getElementById('f-listingPrice').value  = p.listingPrice || '';
-    document.getElementById('f-soldPrice').value     = p.soldPrice || '';
-    document.getElementById('f-vintedFees').value    = p.vintedFees || '';
-    document.getElementById('f-packagingFees').value = p.packagingFees || '';
-    document.getElementById('f-shippingFees').value  = p.shippingFees || '';
-    document.getElementById('f-purchaseDate').value  = p.purchaseDate || '';
-    document.getElementById('f-listingDate').value   = p.listingDate || '';
-    document.getElementById('f-saleDate').value      = p.saleDate || '';
-    document.getElementById('f-photo').value         = p.photo || '';
-    document.getElementById('f-comment').value       = p.comment || '';
-    updateCalcPreview();
-  }
-  document.getElementById('product-modal-overlay').classList.add('open');
-}
-function editProduct(id) { openProductModal(id); }
-function closeProductModal() {
-  document.getElementById('product-modal-overlay').classList.remove('open');
-}
-function maybeCloseModal(e) {
-  if (e.target === document.getElementById('product-modal-overlay')) closeProductModal();
-}
-function clearForm() {
-  ['f-id','f-name','f-category','f-brand','f-size','f-channel',
-   'f-purchasePrice','f-purchaseFees','f-listingPrice','f-soldPrice',
-   'f-vintedFees','f-packagingFees','f-shippingFees',
-   'f-purchaseDate','f-listingDate','f-saleDate','f-photo','f-comment'
-  ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('f-status').value = 'stock';
-  document.getElementById('calc-preview').style.display = 'none';
-}
-
-// Live calc preview
-['f-purchasePrice','f-purchaseFees','f-packagingFees','f-shippingFees','f-soldPrice','f-vintedFees']
-  .forEach(id => document.getElementById(id)?.addEventListener('input', updateCalcPreview));
-
-function updateCalcPreview() {
-  const tmp = {
-    purchasePrice: document.getElementById('f-purchasePrice').value,
-    purchaseFees:  document.getElementById('f-purchaseFees').value,
-    packagingFees: document.getElementById('f-packagingFees').value,
-    shippingFees:  document.getElementById('f-shippingFees').value,
-    soldPrice:     document.getElementById('f-soldPrice').value,
-    vintedFees:    document.getElementById('f-vintedFees').value,
-    status: document.getElementById('f-soldPrice').value > 0 ? 'sold' : 'online'
-  };
-  const c = calcProduct(tmp);
-  const preview = document.getElementById('calc-preview');
-  if (!n(tmp.purchasePrice) && !n(tmp.soldPrice)) { preview.style.display = 'none'; return; }
-  preview.style.display = 'block';
-  document.getElementById('prev-cost').textContent   = fmt(c.cost);
-  document.getElementById('prev-profit').className   = profitClass(c.profit);
-  document.getElementById('prev-profit').textContent = c.profit != null ? fmt(c.profit) : 'N/A (non vendu)';
-  document.getElementById('prev-margin').textContent = c.margin != null ? fmtP(c.margin) : '—';
-  document.getElementById('prev-roi').textContent    = c.roi    != null ? fmtP(c.roi)    : '—';
-}
-
-function saveProduct() {
-  const name = document.getElementById('f-name').value.trim();
-  if (!name) { toast('Le nom du produit est obligatoire.', 'error'); return; }
-  const purchasePrice = document.getElementById('f-purchasePrice').value;
-  if (!purchasePrice) { toast('Le prix d\'achat est obligatoire.', 'error'); return; }
-
-  const id = document.getElementById('f-id').value;
-  const data = {
-    id: id || uid(),
-    name,
-    category:      document.getElementById('f-category').value,
-    brand:         document.getElementById('f-brand').value.trim(),
-    size:          document.getElementById('f-size').value.trim(),
-    status:        document.getElementById('f-status').value,
-    channel:       document.getElementById('f-channel').value,
-    purchasePrice: n(purchasePrice),
-    purchaseFees:  n(document.getElementById('f-purchaseFees').value),
-    listingPrice:  n(document.getElementById('f-listingPrice').value),
-    soldPrice:     n(document.getElementById('f-soldPrice').value),
-    vintedFees:    n(document.getElementById('f-vintedFees').value),
-    packagingFees: n(document.getElementById('f-packagingFees').value),
-    shippingFees:  n(document.getElementById('f-shippingFees').value),
-    purchaseDate:  document.getElementById('f-purchaseDate').value,
-    listingDate:   document.getElementById('f-listingDate').value,
-    saleDate:      document.getElementById('f-saleDate').value,
-    photo:         document.getElementById('f-photo').value.trim(),
-    comment:       document.getElementById('f-comment').value.trim(),
-  };
-
-  if (id) {
-    const idx = products.findIndex(p => p.id === id);
-    if (idx !== -1) products[idx] = data;
-  } else {
-    products.unshift(data);
-  }
-  save();
-  closeProductModal();
-  toast(id ? 'Produit mis à jour ✓' : 'Produit ajouté ✓', 'success');
-  renderProducts();
-}
-
-function dupeProduct(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  const copy = { ...p, id: uid(), name: p.name + ' (copie)', status: 'stock',
-                  soldPrice: 0, saleDate: '', vintedFees: 0 };
-  products.unshift(copy);
-  save();
-  toast('Produit dupliqué ✓', 'success');
-  renderProducts();
-}
-
-function deleteProduct(id) {
-  showConfirm('Supprimer le produit ?', 'Cette action est irréversible.', () => {
-    products = products.filter(p => p.id !== id);
-    save();
-    toast('Produit supprimé.', 'success');
-    renderProducts();
-  });
-}
-
-// ── MONTHLY ────────────────────────────────────────────────
-function changeMonth(dir) {
-  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + dir, 1);
-  renderMonthly();
-}
-
-function renderMonthly() {
-  const mk  = monthKey(currentMonth);
-  const prevMk = monthKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-
-  document.getElementById('month-label').textContent =
-    currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-
-  const sold     = products.filter(p => p.status === 'sold' && p.saleDate?.startsWith(mk));
-  const soldPrev = products.filter(p => p.status === 'sold' && p.saleDate?.startsWith(prevMk));
-  const bought   = products.filter(p => p.purchaseDate?.startsWith(mk));
-  const stock    = products.filter(p => ['stock','online','reserved'].includes(p.status));
-
-  const ca       = sold.reduce((s,p) => s + n(p.soldPrice), 0);
-  const caPrev   = soldPrev.reduce((s,p) => s + n(p.soldPrice), 0);
-  const profit   = sold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
-  const profitP  = soldPrev.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
-  const invested = bought.reduce((s,p) => s + n(p.purchasePrice) + n(p.purchaseFees), 0);
-  const avgMargin = sold.length ? sold.reduce((s,p) => s + (calcProduct(p).margin ?? 0), 0) / sold.length : 0;
-  const roi      = invested > 0 ? profit / invested * 100 : 0;
-
-  const trend = (curr, prev) => {
-    if (!prev) return '';
-    const d = curr - prev;
-    const pct = prev ? (d / Math.abs(prev) * 100).toFixed(0) : 0;
-    if (d > 0) return `<span class="trend-up">▲ ${pct}%</span>`;
-    if (d < 0) return `<span class="trend-down">▼ ${Math.abs(pct)}%</span>`;
-    return `<span class="trend-flat">= 0%</span>`;
-  };
-
-  const kpis = [
-    { label: "CA du mois",     value: fmt(ca),       sub: trend(ca, caPrev), cls: 'blue' },
-    { label: "Bénéfice net",   value: fmt(profit),   sub: trend(profit, profitP), cls: profit >= 0 ? 'green' : 'red' },
-    { label: "Articles vendus", value: sold.length,  sub: trend(sold.length, soldPrev.length) },
-    { label: "Investi ce mois", value: fmt(invested), sub: `${bought.length} achat${bought.length>1?'s':''}` },
-    { label: "Marge moyenne",  value: fmtP(avgMargin), sub: '', cls: avgMargin >= 20 ? 'green' : '' },
-    { label: "ROI du mois",    value: fmtP(roi),     sub: '' },
-    { label: "Stock restant",  value: stock.length,   sub: '' },
-  ];
-
-  document.getElementById('monthly-kpi').innerHTML = kpis.map(k =>
-    `<div class="kpi-card ${k.cls||''}">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ''}
-    </div>`
-  ).join('');
-
-  const goal = settings.monthlyGoal;
-  const pct  = Math.min(100, profit / goal * 100);
-  document.getElementById('monthly-goal').innerHTML = `
-    <div class="progress-header">
-      <span class="progress-label">🎯 Objectif mensuel — ${fmt(goal)}</span>
-      <span class="progress-pct">${fmt(profit)} / ${fmt(goal)} (${pct.toFixed(1)} %)</span>
-    </div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill ${pct >= 100 ? 'green' : ''}" style="width:${pct}%"></div>
+    return `<div class="${cardClass}" onclick="showCycleDetail('${c.id}')">
+      <div class="cycle-card-top">
+        <div>
+          <div class="cycle-card-name">${escHtml(nom)}</div>
+          <div class="cycle-card-ean">${c.ean}</div>
+        </div>
+        ${statutBadge(c.statut)}
+      </div>
+      <div class="cycle-card-metrics">
+        <div class="metric">
+          <div class="metric-label">Jours écoulés</div>
+          <div class="metric-value ${jClass}">${j!==null?j:'—'}</div>
+          <div class="progress-bar"><div class="progress-fill ${jClass}" style="width:${Math.min(100,(j||0)/maxJ*100)}%"></div></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Stock dispo</div>
+          <div class="metric-value ${sClass}">${c.statut==='en_vente'?fmtNum(c.stock_disponible):'—'}</div>
+          ${semaines!==null?`<div class="metric-sub">~${semaines.toFixed(1)} sem.</div>`:''}
+        </div>
+        <div class="metric">
+          <div class="metric-label">Commandé</div>
+          <div class="metric-value">${fmtNum(c.quantite_commandee)}</div>
+          <div class="metric-sub">unités</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Ventes/jour</div>
+          <div class="metric-value">${vitesse!==null?vitesse.toFixed(1):'—'}</div>
+          ${vitesse!==null?'<div class="metric-sub">unités/j</div>':''}
+        </div>
+      </div>
+      ${alertes.length>0?`<div class="cycle-card-alerts">${alertes.map(a=>`<div class="cycle-alert-badge ${a.level}">⚠ ${escHtml(a.msg)}</div>`).join('')}</div>`:''}
     </div>`;
-
-  // Daily chart
-  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 0).getDate();
-  const dailyProfits = Array(daysInMonth).fill(0);
-  sold.forEach(p => {
-    const day = parseInt(p.saleDate.slice(8,10)) - 1;
-    dailyProfits[day] += calcProduct(p).profit ?? 0;
-  });
-  createChart('chart-daily', {
-    type: 'bar',
-    data: {
-      labels: Array.from({length: daysInMonth}, (_,i) => i+1),
-      datasets: [{ label: 'Bénéfice (€)', data: dailyProfits,
-        backgroundColor: dailyProfits.map(v => v >= 0 ? '#16a34a88' : '#dc262688'),
-        borderColor: dailyProfits.map(v => v >= 0 ? '#16a34a' : '#dc2626'),
-        borderWidth: 1, borderRadius: 3 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => v+'€' } }, x: { grid: { display: false } } } }
-  });
-
-  // Monthly category mix
-  const catCount = {};
-  sold.forEach(p => { catCount[p.category||'autre'] = (catCount[p.category||'autre']||0) + 1; });
-  createChart('chart-monthly-cat', {
-    type: 'doughnut',
-    data: { labels: Object.keys(catCount), datasets: [{ data: Object.values(catCount),
-      backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
-      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
-  });
-
-  // Table
-  const tbody = document.getElementById('monthly-sold-body');
-  const empty = document.getElementById('monthly-empty');
-  if (!sold.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-  tbody.innerHTML = sold.sort((a,b) => (b.saleDate||'') > (a.saleDate||'') ? 1 : -1).map(p => {
-    const c = calcProduct(p);
-    return `<tr>
-      <td><b>${esc(p.name)}</b></td>
-      <td>${esc(p.category||'—')}</td>
-      <td>${esc(p.brand||'—')}</td>
-      <td class="num">${fmt(n(p.purchasePrice)+n(p.purchaseFees))}</td>
-      <td class="num">${fmt(n(p.soldPrice))}</td>
-      <td class="num ${profitClass(c.profit)}">${c.profit!=null?fmt(c.profit):'—'}</td>
-      <td class="num">${c.margin!=null?fmtP(c.margin):'—'}</td>
-      <td>${fmtDate(p.saleDate)}</td>
-    </tr>`;
   }).join('');
 }
 
-// ── ANALYSIS ───────────────────────────────────────────────
-function renderAnalysis() {
-  const sold = products.filter(p => p.status === 'sold');
+function setDashFilter(f) { dashActiveFilter = f; renderDashboard(); }
 
-  // ALERTS
-  const alerts = [];
-  const slowStock = products.filter(p => ['stock','online'].includes(p.status) && daysAgo(p.purchaseDate) > 60);
-  if (slowStock.length)
-    alerts.push({ type: 'warning', msg: `⚠️ ${slowStock.length} article(s) en stock depuis plus de 60 jours. Envisagez de baisser les prix.` });
+// ============================================================
+// CYCLE DETAIL
+// ============================================================
+function showCycleDetail(id) {
+  const cycle = db.cycles.find(c => c.id === id);
+  if (!cycle) return;
+  const prod = getProduit(cycle.ean);
+  const nom = prod ? prod.nom : cycle.ean;
+  const j = daysFromToday(cycle.date_commande);
+  const alertes = getAlertesCycle(cycle);
+  const vitesse = calcVitesseVente(cycle);
+  const semaines = calcSemainesStock(cycle);
+  const statutIdx = STATUTS.indexOf(cycle.statut);
+  const next = nextStatut(cycle.statut);
 
-  const lowMargin = sold.filter(p => { const c = calcProduct(p); return c.margin != null && c.margin < 15; });
-  if (lowMargin.length)
-    alerts.push({ type: 'danger', msg: `📉 ${lowMargin.length} vente(s) avec une marge inférieure à 15 %. Vérifiez vos prix d'achat.` });
+  const timelineHtml = STATUTS.map((s, i) => {
+    const isDone = i < statutIdx;
+    const isCurrent = i === statutIdx;
+    const date = getStatutDate(cycle, s);
+    return `<div class="timeline-step ${isDone?'done':''} ${isCurrent?'current':''}">
+      <div class="timeline-dot">${isDone?'✓':isCurrent?STATUT_ICONS[s]:''}</div>
+      <div class="timeline-label">${STATUT_LABELS[s]}</div>
+      <div class="timeline-date">${fmtDate(date)}</div>
+    </div>`;
+  }).join('');
 
-  const negProfit = sold.filter(p => { const c = calcProduct(p); return c.profit != null && c.profit < 0; });
-  if (negProfit.length)
-    alerts.push({ type: 'danger', msg: `🔴 ${negProfit.length} vente(s) en perte ! Analysez vos coûts.` });
+  const stepsHtml = buildStepsHtml(cycle);
+  const ventesHtml = buildVentesHtml(cycle);
 
-  document.getElementById('analysis-alerts').innerHTML = alerts.map(a =>
-    `<div class="alert alert-${a.type}">${a.msg}</div>`
-  ).join('');
-
-  // BEST CATEGORIES
-  const catProfit = {}, catCount = {}, catMargin = {};
-  sold.forEach(p => {
-    const k = p.category || 'autre';
-    const c = calcProduct(p);
-    catProfit[k] = (catProfit[k] || 0) + (c.profit ?? 0);
-    catCount[k]  = (catCount[k]  || 0) + 1;
-    catMargin[k] = (catMargin[k] || 0) + (c.margin ?? 0);
-  });
-
-  const topCats = Object.keys(catProfit).sort((a,b) => catProfit[b] - catProfit[a]).slice(0,5);
-  const topCatsHTML = topCats.map(k =>
-    `<div class="analysis-row">
-      <span class="analysis-name">${k}</span>
-      <span class="analysis-val ${catProfit[k]>=0?'profit-pos':'profit-neg'}">${fmt(catProfit[k])} (${catCount[k]} vte${catCount[k]>1?'s':''})</span>
-    </div>`
-  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Aucune donnée</div>';
-
-  // BEST BRANDS
-  const brandProfit = {}, brandCount = {};
-  sold.forEach(p => {
-    const k = p.brand || 'Sans marque';
-    const c = calcProduct(p);
-    brandProfit[k] = (brandProfit[k] || 0) + (c.profit ?? 0);
-    brandCount[k]  = (brandCount[k]  || 0) + 1;
-  });
-  const topBrands = Object.keys(brandProfit).sort((a,b) => brandProfit[b] - brandProfit[a]).slice(0,5);
-  const topBrandsHTML = topBrands.map(k =>
-    `<div class="analysis-row">
-      <span class="analysis-name">${esc(k)}</span>
-      <span class="analysis-val profit-pos">${fmt(brandProfit[k])} (${brandCount[k]} vte${brandCount[k]>1?'s':''})</span>
-    </div>`
-  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Aucune donnée</div>';
-
-  // FASTEST SELLERS (sold, with duration)
-  const withDur = sold.filter(p => p.listingDate && p.saleDate)
-    .map(p => ({ ...p, dur: daysBetween(p.listingDate, p.saleDate) }))
-    .sort((a,b) => a.dur - b.dur).slice(0,5);
-  const fastSellHTML = withDur.map(p =>
-    `<div class="analysis-row">
-      <span class="analysis-name">${esc(p.name)}</span>
-      <span class="analysis-val" style="color:var(--green)">${p.dur}j</span>
-    </div>`
-  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Aucune donnée (dates manquantes)</div>';
-
-  // SLEEPING STOCK
-  const sleeping = products.filter(p => ['stock','online'].includes(p.status) && p.purchaseDate)
-    .map(p => ({ ...p, age: daysAgo(p.purchaseDate) }))
-    .sort((a,b) => b.age - a.age).slice(0,5);
-  const sleepHTML = sleeping.map(p =>
-    `<div class="analysis-row">
-      <span class="analysis-name">${esc(p.name)}</span>
-      <span class="analysis-val" style="color:${p.age>60?'var(--red)':'var(--orange)'}">${p.age}j</span>
-    </div>`
-  ).join('') || '<div style="color:var(--text-muted);font-size:12px;">Stock vide 🎉</div>';
-
-  // AVG PRICES
-  const avgBuy  = sold.length ? sold.reduce((s,p)=>s+n(p.purchasePrice),0)/sold.length : 0;
-  const avgSell = sold.length ? sold.reduce((s,p)=>s+n(p.soldPrice),0)/sold.length : 0;
-  const avgCost = sold.length ? sold.reduce((s,p)=>s+calcProduct(p).cost,0)/sold.length : 0;
-
-  document.getElementById('analysis-grid').innerHTML = `
-    <div class="analysis-card">
-      <div class="analysis-card-title">🏆 Catégories les plus rentables</div>
-      ${topCatsHTML}
+  const html = `
+    <div class="flex justify-between items-center flex-wrap gap-8 mb-16">
+      <div>
+        <div class="section-title" style="margin-bottom:4px">${escHtml(nom)}</div>
+        <div style="color:var(--gray-400);font-size:12px;font-family:monospace">${cycle.ean}</div>
+      </div>
+      <div class="flex gap-8 flex-wrap">
+        ${statutBadge(cycle.statut)}
+        ${cycle.statut!=='termine'?`<button class="btn btn-danger btn-sm" onclick="clotureCycle('${cycle.id}')">Clôturer</button>`:''}
+      </div>
     </div>
-    <div class="analysis-card">
-      <div class="analysis-card-title">🏷️ Marques les plus rentables</div>
-      ${topBrandsHTML}
+    ${alertes.map(a=>`<div class="alert alert-${a.level}"><span class="alert-icon">${a.level==='danger'?'🚨':'⚠'}</span>${escHtml(a.msg)}</div>`).join('')}
+    <div class="card">
+      <div class="stats-row" style="margin-bottom:0">
+        <div class="stat-card"><div class="stat-value">${j!==null?j:'—'}</div><div class="stat-label">Jours depuis commande</div></div>
+        <div class="stat-card"><div class="stat-value">${fmtNum(cycle.quantite_commandee)}</div><div class="stat-label">Commandé</div></div>
+        <div class="stat-card"><div class="stat-value">${cycle.quantite_recue!=null?fmtNum(cycle.quantite_recue):'—'}</div><div class="stat-label">Reçu</div></div>
+        <div class="stat-card"><div class="stat-value">${cycle.quantite_envoyee_amazon?fmtNum(cycle.quantite_envoyee_amazon):'—'}</div><div class="stat-label">Envoyé Amazon</div></div>
+        ${['en_vente','termine'].includes(cycle.statut)?`
+          <div class="stat-card"><div class="stat-value">${fmtNum(cycle.stock_disponible)}</div><div class="stat-label">Stock dispo</div></div>
+          <div class="stat-card"><div class="stat-value">${vitesse!==null?vitesse.toFixed(2):'—'}</div><div class="stat-label">Unités/jour</div></div>
+          ${semaines!==null?`<div class="stat-card"><div class="stat-value">${semaines.toFixed(1)}</div><div class="stat-label">Semaines restantes</div></div>`:''}
+        `:''}
+      </div>
     </div>
-    <div class="analysis-card">
-      <div class="analysis-card-title">⚡ Articles vendus le plus vite</div>
-      ${fastSellHTML}
+    <div class="card">
+      <div class="card-title mb-16">Progression</div>
+      <div class="timeline">${timelineHtml}</div>
     </div>
-    <div class="analysis-card">
-      <div class="analysis-card-title">😴 Stock dormant (ancienneté)</div>
-      ${sleepHTML}
+    <div class="card">
+      <div class="card-title mb-16">Étapes du cycle</div>
+      ${stepsHtml}
+      ${next&&cycle.statut!=='termine'?`<div style="margin-top:16px"><button class="btn btn-primary" onclick="showAvancerModal('${cycle.id}')">${STATUT_ICONS[next]} Passer à : ${STATUT_LABELS[next]}</button></div>`:''}
     </div>
-    <div class="analysis-card">
-      <div class="analysis-card-title">📐 Prix moyens (articles vendus)</div>
-      <div class="analysis-row"><span>Prix achat moyen</span><span class="analysis-val">${fmt(avgBuy)}</span></div>
-      <div class="analysis-row"><span>Coût total moyen</span><span class="analysis-val">${fmt(avgCost)}</span></div>
-      <div class="analysis-row"><span>Prix de vente moyen</span><span class="analysis-val">${fmt(avgSell)}</span></div>
-      <div class="analysis-row"><span>Ratio revente/achat</span><span class="analysis-val">${avgBuy>0?(avgSell/avgBuy).toFixed(1)+'x':'—'}</span></div>
-    </div>
-    <div class="analysis-card">
-      <div class="analysis-card-title">🔮 Projection mensuelle</div>
-      ${renderProjection()}
+    ${cycle.prix_achat_unitaire?`<div class="card"><div class="card-title mb-8">Informations d'achat</div><div>Prix unitaire : <strong>${cycle.prix_achat_unitaire} €</strong></div>${cycle.quantite_recue?`<div>Coût total estimé : <strong>${(cycle.prix_achat_unitaire*cycle.quantite_recue).toFixed(2)} €</strong></div>`:''}</div>`:''}
+    ${ventesHtml}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="showPage('dashboard')">← Dashboard</button>
+      ${prod?`<button class="btn btn-ghost btn-sm" onclick="showProduitDetail('${prod.ean}')">Voir fiche produit</button>`:''}
     </div>
   `;
 
-  // Charts
-  const pcLabels = Object.keys(catProfit);
-  const pcData   = Object.values(catProfit);
-  createChart('chart-profit-cat', {
-    type: 'bar',
-    data: { labels: pcLabels, datasets: [{ label: 'Bénéfice (€)', data: pcData,
-      backgroundColor: pcData.map((_,i) => COLORS[i % COLORS.length] + '99'),
-      borderColor: pcData.map((_,i) => COLORS[i % COLORS.length]), borderWidth: 1.5, borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => v+'€' } }, x: { grid: { display: false } } } }
-  });
-
-  const bm = {};
-  sold.forEach(p => {
-    const k = p.brand || 'Sans marque';
-    const c = calcProduct(p);
-    if (!bm[k]) bm[k] = { sum: 0, cnt: 0 };
-    bm[k].sum += c.margin ?? 0;
-    bm[k].cnt++;
-  });
-  const bmSorted = Object.entries(bm).sort((a,b) => (b[1].sum/b[1].cnt) - (a[1].sum/a[1].cnt)).slice(0,8);
-  createChart('chart-margin-brand', {
-    type: 'bar',
-    data: { labels: bmSorted.map(([k])=>k),
-            datasets: [{ label: 'Marge moy. (%)', data: bmSorted.map(([,v])=>(v.sum/v.cnt).toFixed(1)),
-              backgroundColor: '#2563eb88', borderColor: '#2563eb', borderWidth: 1.5, borderRadius: 4 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { callback: v => v+'%' } } } }
-  });
+  document.getElementById('cycle-detail-content').innerHTML = html;
+  showPage('cycle');
 }
 
-function renderProjection() {
-  const sold = products.filter(p => p.status === 'sold' && p.saleDate);
-  if (!sold.length) return '<div style="color:var(--text-muted);font-size:12px;">Pas encore de données</div>';
-
-  const now      = new Date();
-  const dayOfM   = now.getDate();
-  const daysInM  = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-
-  const thisMonthSold = sold.filter(p => p.saleDate.startsWith(monthKey(now)));
-  const monthProfit   = thisMonthSold.reduce((s,p) => s + (calcProduct(p).profit ?? 0), 0);
-  const projected     = dayOfM > 0 ? (monthProfit / dayOfM) * daysInM : 0;
-  const goal          = settings.monthlyGoal;
-  const targets = [1000, 2000, 3000];
-
-  return `
-    <div class="analysis-row"><span>Bénéf. actuel du mois</span><span class="analysis-val profit-pos">${fmt(monthProfit)}</span></div>
-    <div class="analysis-row"><span>Projection fin de mois</span><span class="analysis-val ${projected>=goal?'profit-pos':'profit-neg'}">${fmt(projected)}</span></div>
-    ${targets.map(t => `<div class="analysis-row"><span>Pour atteindre ${t}€</span>
-      <span class="analysis-val">${monthProfit >= t ? '✅ Atteint' : fmt(t - monthProfit) + ' restants'}</span></div>`).join('')}
-  `;
-}
-
-// ── STOCK ─────────────────────────────────────────────────
-function renderStock() {
-  const stockItems = products.filter(p => ['stock','online','reserved'].includes(p.status));
-  const filterDays = parseInt(document.getElementById('stock-filter').value) || 0;
-
-  const totalBuyVal  = stockItems.reduce((s,p) => s + n(p.purchasePrice) + n(p.purchaseFees), 0);
-  const totalSellVal = stockItems.reduce((s,p) => s + n(p.listingPrice || p.purchasePrice), 0);
-
-  const kpis = [
-    { label: 'Articles en stock', value: stockItems.length, cls: '' },
-    { label: 'Valeur (prix achat)', value: fmt(totalBuyVal), cls: '' },
-    { label: 'Valeur estimée (vente)', value: fmt(totalSellVal), cls: 'green' },
-    { label: 'Plus-value potentielle', value: fmt(totalSellVal - totalBuyVal), cls: totalSellVal > totalBuyVal ? 'green' : 'red' },
-    { label: 'Articles > 30j', value: stockItems.filter(p => daysAgo(p.purchaseDate) > 30).length, cls: '' },
-    { label: 'Articles > 60j', value: stockItems.filter(p => daysAgo(p.purchaseDate) > 60).length, cls: 'orange' },
-    { label: 'Articles > 90j', value: stockItems.filter(p => daysAgo(p.purchaseDate) > 90).length, cls: 'red' },
+function buildStepsHtml(cycle) {
+  const steps = [
+    { key:'commande', date:cycle.date_commande, fields:[] },
+    { key:'recu_etiquete', date:cycle.date_reception, fields:[
+      { label:'Quantité reçue', val:cycle.quantite_recue, unit:'unités' },
+      { label:'Notes réception / écart', val:cycle.notes_ecart }
+    ]},
+    { key:'envoye_amazon', date:cycle.date_envoi_amazon, fields:[
+      { label:'Quantité envoyée', val:cycle.quantite_envoyee_amazon, unit:'unités' },
+      { label:'N° Shipment FBA', val:cycle.numero_shipment_fba }
+    ]},
+    { key:'en_vente', date:cycle.date_mise_en_vente, fields:[] },
+    { key:'termine', date:cycle.date_cloture, fields:[] }
   ];
-  document.getElementById('stock-kpi').innerHTML = kpis.map(k =>
-    `<div class="kpi-card ${k.cls}">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-    </div>`
-  ).join('');
+  const statutIdx = STATUTS.indexOf(cycle.statut);
 
-  // Alerts
-  const sleeping = stockItems.filter(p => daysAgo(p.purchaseDate) > 90);
-  const warn     = stockItems.filter(p => { const d = daysAgo(p.purchaseDate); return d > 60 && d <= 90; });
-  const alertsEl = document.getElementById('stock-alerts');
-  if (!sleeping.length && !warn.length) {
-    alertsEl.innerHTML = '<div style="color:var(--green);font-size:12px;margin-bottom:16px;">✅ Aucun article dormant. Beau travail !</div>';
-  } else {
-    alertsEl.innerHTML = `<div class="stock-alert-list">
-      ${sleeping.map(p => `<div class="stock-alert-item">
-        <span>🔴 <b>${esc(p.name)}</b> — en stock depuis <b>${daysAgo(p.purchaseDate)}j</b></span>
-        <button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Modifier</button>
-      </div>`).join('')}
-      ${warn.map(p => `<div class="stock-alert-item warn">
-        <span>🟠 <b>${esc(p.name)}</b> — en stock depuis <b>${daysAgo(p.purchaseDate)}j</b></span>
-        <button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Modifier</button>
-      </div>`).join('')}
+  return steps.map((step, i) => {
+    const isDone = i < statutIdx;
+    const isCurrent = i === statutIdx;
+    const hClass = isDone ? 'done' : (isCurrent ? 'current' : '');
+    const fieldContent = step.fields.filter(f => f.val !== null && f.val !== undefined && f.val !== '')
+      .map(f => `<div style="margin-bottom:4px"><span style="color:var(--gray-500);font-size:12px">${f.label} : </span><strong>${escHtml(String(f.val))} ${f.unit||''}</strong></div>`).join('');
+    return `<div class="step-panel">
+      <div class="step-header ${hClass}">
+        <div class="step-title"><span>${isDone?'✓':STATUT_ICONS[step.key]}</span><span>${STATUT_LABELS[step.key]}</span></div>
+        <div class="flex gap-8 items-center flex-wrap">
+          ${step.date?`<span style="font-size:12px;color:var(--gray-500)">${fmtDate(step.date)}</span>`:(isDone||isCurrent?'<span style="font-size:12px;color:var(--gray-400)">date non renseignée</span>':'')}
+          ${(isDone||isCurrent)?`<button class="btn btn-ghost btn-sm" onclick="showEditStepModal('${cycle.id}','${step.key}')">Modifier</button>`:''}
+        </div>
+      </div>
+      ${fieldContent?`<div class="step-body">${fieldContent}</div>`:''}
     </div>`;
+  }).join('');
+}
+
+function buildVentesHtml(cycle) {
+  if (!['en_vente','termine'].includes(cycle.statut)) return '';
+  const ventes = [];
+  db.imports.forEach(imp => imp.lignes.forEach(l => {
+    if (l.ean === cycle.ean) ventes.push({ ...l, import_date:imp.date_import, import_nom:imp.nom_fichier });
+  }));
+  if (ventes.length === 0) return `<div class="card"><div class="card-title mb-8">Ventes importées</div><p class="text-muted">Aucune vente importée pour ce cycle.</p></div>`;
+  const total = ventes.reduce((s, v) => s + (v.quantite_vendue||0), 0);
+  return `<div class="card">
+    <div class="card-header">
+      <div class="card-title">Ventes importées</div>
+      <div style="font-size:13px;color:var(--gray-500)">Total : <strong>${fmtNum(total)} unités</strong></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date vente</th><th>Qté vendue</th><th>Import</th></tr></thead>
+      <tbody>${ventes.map(v=>`<tr><td>${fmtDate(v.date_vente)}</td><td>${fmtNum(v.quantite_vendue)}</td><td style="font-size:11px;color:var(--gray-400)">${fmtDate(v.import_date)} — ${escHtml(v.import_nom||'')}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ============================================================
+// AVANCER / MODIFIER ÉTAPE
+// ============================================================
+function showAvancerModal(cycleId) {
+  const cycle = db.cycles.find(c => c.id === cycleId);
+  if (!cycle) return;
+  const next = nextStatut(cycle.statut);
+  if (!next) return;
+
+  let extra = '';
+  if (next === 'recu_etiquete') extra = `
+    <div class="form-row">
+      <div class="form-group"><label>Quantité reçue *</label><input type="number" id="av-qte" value="${cycle.quantite_commandee}" min="0"></div>
+    </div>
+    <div class="form-group"><label>Notes / écart</label><textarea id="av-notes">${cycle.notes_ecart||''}</textarea></div>`;
+  if (next === 'envoye_amazon') extra = `
+    <div class="form-row">
+      <div class="form-group"><label>Quantité envoyée *</label><input type="number" id="av-qte-amazon" value="${cycle.quantite_recue||cycle.quantite_commandee}" min="0"></div>
+      <div class="form-group"><label>N° Shipment FBA</label><input type="text" id="av-shipment" value="${cycle.numero_shipment_fba||''}" placeholder="Ex: FBA15XXXXXXXX"></div>
+    </div>`;
+
+  openModal(`
+    <div class="modal-title">${STATUT_ICONS[next]} Passer à : ${STATUT_LABELS[next]}</div>
+    <div class="form-group"><label>Date *</label><input type="date" id="av-date" value="${today()}"></div>
+    ${extra}
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="validerAvancement('${cycleId}','${next}')">Confirmer</button>
+    </div>
+  `);
+}
+
+function validerAvancement(cycleId, next) {
+  const cycle = db.cycles.find(c => c.id === cycleId);
+  if (!cycle) return;
+  const date = document.getElementById('av-date')?.value;
+  if (!date) { alert('La date est requise.'); return; }
+  cycle.statut = next;
+  if (next === 'recu_etiquete') {
+    cycle.date_reception = date;
+    const q = parseInt(document.getElementById('av-qte')?.value);
+    if (!isNaN(q)) cycle.quantite_recue = q;
+    cycle.notes_ecart = document.getElementById('av-notes')?.value || '';
+  }
+  if (next === 'envoye_amazon') {
+    cycle.date_envoi_amazon = date;
+    const q = parseInt(document.getElementById('av-qte-amazon')?.value);
+    if (!isNaN(q)) { cycle.quantite_envoyee_amazon = q; cycle.stock_disponible = q; }
+    cycle.numero_shipment_fba = document.getElementById('av-shipment')?.value || '';
+  }
+  if (next === 'en_vente') cycle.date_mise_en_vente = date;
+  if (next === 'termine') cycle.date_cloture = date;
+  saveData();
+  closeModal();
+  showCycleDetail(cycleId);
+}
+
+function showEditStepModal(cycleId, step) {
+  const cycle = db.cycles.find(c => c.id === cycleId);
+  if (!cycle) return;
+  const currentDate = getStatutDate(cycle, step) || today();
+  let extra = '';
+  if (step === 'commande') extra = `
+    <div class="form-row">
+      <div class="form-group"><label>Quantité commandée</label><input type="number" id="es-qte" value="${cycle.quantite_commandee||''}"></div>
+      <div class="form-group"><label>Prix achat unitaire (€)</label><input type="number" id="es-prix" value="${cycle.prix_achat_unitaire||''}" step="0.01"></div>
+    </div>`;
+  if (step === 'recu_etiquete') extra = `
+    <div class="form-group"><label>Quantité reçue</label><input type="number" id="es-qte-recue" value="${cycle.quantite_recue||''}"></div>
+    <div class="form-group"><label>Notes / écart</label><textarea id="es-notes">${cycle.notes_ecart||''}</textarea></div>`;
+  if (step === 'envoye_amazon') extra = `
+    <div class="form-row">
+      <div class="form-group"><label>Quantité envoyée</label><input type="number" id="es-qte-amazon" value="${cycle.quantite_envoyee_amazon||''}"></div>
+      <div class="form-group"><label>N° Shipment FBA</label><input type="text" id="es-shipment" value="${cycle.numero_shipment_fba||''}"></div>
+    </div>`;
+
+  openModal(`
+    <div class="modal-title">Modifier : ${STATUT_LABELS[step]}</div>
+    <div class="form-group"><label>Date</label><input type="date" id="es-date" value="${currentDate}"></div>
+    ${extra}
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEditStep('${cycleId}','${step}')">Enregistrer</button>
+    </div>
+  `);
+}
+
+function saveEditStep(cycleId, step) {
+  const cycle = db.cycles.find(c => c.id === cycleId);
+  if (!cycle) return;
+  const date = document.getElementById('es-date')?.value;
+  if (step === 'commande') {
+    if (date) cycle.date_commande = date;
+    const q = parseInt(document.getElementById('es-qte')?.value); if (!isNaN(q)) cycle.quantite_commandee = q;
+    const pr = parseFloat(document.getElementById('es-prix')?.value); cycle.prix_achat_unitaire = (!isNaN(pr) && pr > 0) ? pr : null;
+  }
+  if (step === 'recu_etiquete') {
+    if (date) cycle.date_reception = date;
+    const q = parseInt(document.getElementById('es-qte-recue')?.value); if (!isNaN(q)) cycle.quantite_recue = q;
+    cycle.notes_ecart = document.getElementById('es-notes')?.value || '';
+  }
+  if (step === 'envoye_amazon') {
+    if (date) cycle.date_envoi_amazon = date;
+    const q = parseInt(document.getElementById('es-qte-amazon')?.value); if (!isNaN(q)) cycle.quantite_envoyee_amazon = q;
+    cycle.numero_shipment_fba = document.getElementById('es-shipment')?.value || '';
+  }
+  if (step === 'en_vente' && date) cycle.date_mise_en_vente = date;
+  if (step === 'termine' && date) cycle.date_cloture = date;
+  saveData();
+  closeModal();
+  showCycleDetail(cycleId);
+}
+
+function clotureCycle(id) {
+  openModal(`
+    <div class="modal-title">Clôturer ce cycle</div>
+    <p style="color:var(--gray-600);margin-bottom:16px">Passer le cycle au statut <strong>Terminé</strong>.</p>
+    <div class="form-group"><label>Date de clôture</label><input type="date" id="cloture-date" value="${today()}"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmerCloture('${id}')">Confirmer la clôture</button>
+    </div>
+  `);
+}
+
+function confirmerCloture(id) {
+  const cycle = db.cycles.find(c => c.id === id);
+  if (!cycle) return;
+  cycle.statut = 'termine';
+  cycle.date_cloture = document.getElementById('cloture-date')?.value || today();
+  saveData(); closeModal(); showPage('dashboard');
+}
+
+// ============================================================
+// NOUVEAU CYCLE
+// ============================================================
+function showNouveauCycle() {
+  document.getElementById('nc-ean').value = '';
+  document.getElementById('nc-nom').value = '';
+  document.getElementById('nc-fournisseur').value = '';
+  document.getElementById('nc-notes').value = '';
+  document.getElementById('nc-date-commande').value = today();
+  document.getElementById('nc-quantite').value = '';
+  document.getElementById('nc-prix').value = '';
+  document.getElementById('nc-produit-found').classList.add('hidden');
+  document.getElementById('nc-produit-new').classList.add('hidden');
+  showPage('nouveau-cycle');
+}
+
+function checkEAN() {
+  const ean = document.getElementById('nc-ean').value.trim();
+  const foundEl = document.getElementById('nc-produit-found');
+  const newEl = document.getElementById('nc-produit-new');
+  if (!ean) { foundEl.classList.add('hidden'); newEl.classList.add('hidden'); return; }
+  const prod = getProduit(ean);
+  if (prod) {
+    const actif = getCycleActif(ean);
+    let txt = `Produit trouvé : <strong>${escHtml(prod.nom)}</strong>`;
+    if (prod.fournisseur_principal) txt += ` — ${escHtml(prod.fournisseur_principal)}`;
+    if (actif) txt += `<br><span style="color:var(--warning)">⚠ Un cycle actif existe déjà pour cet EAN (${STATUT_LABELS[actif.statut]}).</span>`;
+    document.getElementById('nc-found-text').innerHTML = txt;
+    foundEl.classList.remove('hidden');
+    newEl.classList.add('hidden');
+  } else {
+    foundEl.classList.add('hidden');
+    newEl.classList.remove('hidden');
+  }
+}
+
+function creerCycle() {
+  const ean = document.getElementById('nc-ean').value.trim();
+  const dateCommande = document.getElementById('nc-date-commande').value;
+  const qte = parseInt(document.getElementById('nc-quantite').value);
+  const prix = parseFloat(document.getElementById('nc-prix').value);
+  if (!ean) { alert('EAN requis.'); return; }
+  if (!dateCommande) { alert('Date de commande requise.'); return; }
+  if (isNaN(qte) || qte <= 0) { alert('Quantité commandée invalide.'); return; }
+
+  let prod = getProduit(ean);
+  if (!prod) {
+    const nom = document.getElementById('nc-nom').value.trim();
+    if (!nom) { alert('Nom du produit requis.'); return; }
+    prod = { id:genId(), ean, nom, fournisseur_principal:document.getElementById('nc-fournisseur').value.trim(), notes:document.getElementById('nc-notes').value.trim() };
+    db.produits.push(prod);
   }
 
-  // Charts
-  const catData = {};
-  stockItems.forEach(p => {
-    catData[p.category||'autre'] = (catData[p.category||'autre'] || { count:0, val:0 });
-    catData[p.category||'autre'].count++;
-    catData[p.category||'autre'].val += n(p.listingPrice || p.purchasePrice);
-  });
-  createChart('chart-stock-cat', {
-    type: 'doughnut',
-    data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData).map(v=>v.count),
-      backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
-      plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
-  });
-  createChart('chart-stock-val', {
-    type: 'bar',
-    data: { labels: Object.keys(catData), datasets: [{ label: 'Valeur (€)', data: Object.values(catData).map(v=>v.val.toFixed(2)),
-      backgroundColor: COLORS.map(c=>c+'99'), borderColor: COLORS, borderWidth: 1.5, borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => v+'€' } }, x: { grid: { display: false } } } }
-  });
+  const cycle = {
+    id:genId(), produit_id:prod.id, ean, statut:'commande',
+    date_commande:dateCommande, date_reception:null, date_envoi_amazon:null, date_mise_en_vente:null, date_cloture:null,
+    quantite_commandee:qte, quantite_recue:null, quantite_envoyee_amazon:null, stock_disponible:0,
+    prix_achat_unitaire:(!isNaN(prix)&&prix>0)?prix:null, numero_shipment_fba:null, notes_ecart:null
+  };
+  db.cycles.push(cycle);
+  saveData();
+  showCycleDetail(cycle.id);
+}
 
-  // Table
-  let list = filterDays ? stockItems.filter(p => daysAgo(p.purchaseDate) > filterDays) : stockItems;
-  list = list.sort((a,b) => (daysAgo(b.purchaseDate)||0) - (daysAgo(a.purchaseDate)||0));
-
-  const tbody = document.getElementById('stock-body');
-  const empty = document.getElementById('stock-empty');
-  if (!list.length) { tbody.innerHTML = ''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  tbody.innerHTML = list.map(p => {
-    const age = daysAgo(p.purchaseDate);
-    const ageColor = age > 90 ? 'var(--red)' : age > 60 ? 'var(--orange)' : 'var(--text-muted)';
+// ============================================================
+// PRODUITS
+// ============================================================
+function renderProduits() {
+  const search = (document.getElementById('prod-search')?.value || '').toLowerCase();
+  const prods = db.produits.filter(p => !search || p.nom.toLowerCase().includes(search) || p.ean.includes(search) || (p.fournisseur_principal||'').toLowerCase().includes(search));
+  const tbody = document.getElementById('produits-tbody');
+  if (prods.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="table-empty">Aucun produit${search?' trouvé':''}.${!search?' <a href="#" onclick="showEditProduit(null)">Créer un produit</a>':''}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = prods.map(p => {
+    const cycles = db.cycles.filter(c => c.ean === p.ean);
+    const actif = cycles.find(c => c.statut !== 'termine');
+    const dernier = cycles.sort((a,b) => (b.date_commande||'').localeCompare(a.date_commande||''))[0];
     return `<tr>
-      <td><b>${esc(p.name)}</b></td>
-      <td>${esc(p.category||'—')}</td>
-      <td>${esc(p.brand||'—')}</td>
-      <td>${statusBadge(p.status)}</td>
-      <td class="num">${fmt(n(p.purchasePrice)+n(p.purchaseFees))}</td>
-      <td class="num">${p.listingPrice ? fmt(n(p.listingPrice)) : '—'}</td>
-      <td style="color:${ageColor};font-weight:600;">${age != null ? age+'j' : '—'}</td>
-      <td><button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Modifier</button></td>
+      <td class="font-mono" style="font-size:12px">${p.ean}</td>
+      <td><a onclick="showProduitDetail('${p.ean}')">${escHtml(p.nom)}</a></td>
+      <td style="color:var(--gray-500)">${escHtml(p.fournisseur_principal||'—')}</td>
+      <td>${cycles.length}${actif?` <span class="badge badge-vente" style="font-size:10px">actif</span>`:''}</td>
+      <td style="font-size:12px;color:var(--gray-500)">${dernier?fmtDate(dernier.date_commande):'—'}</td>
+      <td class="text-right"><button class="btn btn-ghost btn-sm" onclick="showEditProduit('${p.ean}')">Modifier</button></td>
     </tr>`;
   }).join('');
 }
 
-// ── IMPORT / EXPORT ────────────────────────────────────────
-function renderIO() {
-  const goalInput = document.getElementById('goal-input');
-  if (goalInput) goalInput.value = settings.monthlyGoal;
+function showProduitDetail(ean) {
+  const prod = getProduit(ean);
+  if (!prod) return;
+  const cycles = db.cycles.filter(c => c.ean === ean).sort((a,b) => (b.date_commande||'').localeCompare(a.date_commande||''));
+  const html = `
+    <div class="flex justify-between items-center flex-wrap gap-8 mb-16">
+      <div>
+        <div class="section-title" style="margin-bottom:4px">${escHtml(prod.nom)}</div>
+        <div style="font-family:monospace;font-size:12px;color:var(--gray-400)">${prod.ean}</div>
+        ${prod.fournisseur_principal?`<div style="font-size:13px;color:var(--gray-500);margin-top:4px">Fournisseur : ${escHtml(prod.fournisseur_principal)}</div>`:''}
+      </div>
+      <div class="flex gap-8 flex-wrap">
+        <button class="btn btn-ghost btn-sm" onclick="showEditProduit('${ean}')">Modifier</button>
+        <button class="btn btn-primary btn-sm" onclick="prefillNouveauCycle('${ean}')">+ Nouveau cycle</button>
+      </div>
+    </div>
+    ${prod.notes?`<div class="card"><div class="card-title mb-8">Notes</div><p style="font-size:13px;color:var(--gray-600)">${escHtml(prod.notes)}</p></div>`:''}
+    <div class="card">
+      <div class="card-title mb-16">Historique des cycles (${cycles.length})</div>
+      ${cycles.length===0?`<p class="text-muted">Aucun cycle pour ce produit.</p>`:`
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date commande</th><th>Statut</th><th>Commandé</th><th>Reçu</th><th>Envoyé Amazon</th><th>Durée (j)</th><th></th></tr></thead>
+          <tbody>${cycles.map(c => {
+            const duree = c.date_cloture ? daysBetween(c.date_commande, c.date_cloture) : daysFromToday(c.date_commande);
+            return `<tr>
+              <td>${fmtDate(c.date_commande)}</td>
+              <td>${statutBadge(c.statut)}</td>
+              <td>${fmtNum(c.quantite_commandee)}</td>
+              <td>${c.quantite_recue!=null?fmtNum(c.quantite_recue):'—'}</td>
+              <td>${c.quantite_envoyee_amazon!=null?fmtNum(c.quantite_envoyee_amazon):'—'}</td>
+              <td>${duree!==null?duree:'—'}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="showCycleDetail('${c.id}')">Voir</button></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>`}
+    </div>
+  `;
+  document.getElementById('produit-detail-content').innerHTML = html;
+  showPage('produit-detail');
 }
 
-function saveGoal() {
-  const v = parseFloat(document.getElementById('goal-input').value);
-  if (!v || v <= 0) { toast('Objectif invalide.', 'error'); return; }
-  settings.monthlyGoal = v;
-  save();
-  toast(`Objectif mensuel mis à jour : ${fmt(v)} ✓`, 'success');
+function prefillNouveauCycle(ean) {
+  showNouveauCycle();
+  document.getElementById('nc-ean').value = ean;
+  checkEAN();
+}
+
+function showEditProduit(ean) {
+  const prod = ean ? getProduit(ean) : null;
+  openModal(`
+    <div class="modal-title">${prod?'Modifier le produit':'Nouveau produit'}</div>
+    <div class="form-group"><label>EAN *</label><input type="text" id="ep-ean" value="${prod?prod.ean:''}" ${prod?'readonly style="background:var(--gray-100)"':''} placeholder="Ex: 3760000000000"></div>
+    <div class="form-group"><label>Nom *</label><input type="text" id="ep-nom" value="${prod?escHtml(prod.nom):''}" placeholder="Nom du produit"></div>
+    <div class="form-group"><label>Fournisseur principal</label><input type="text" id="ep-fournisseur" value="${prod?escHtml(prod.fournisseur_principal||''):''}"></div>
+    <div class="form-group"><label>Notes</label><textarea id="ep-notes">${prod?escHtml(prod.notes||''):''}</textarea></div>
+    <div class="modal-footer">
+      ${prod?`<button class="btn btn-danger" onclick="supprimerProduit('${prod.ean}')">Supprimer</button>`:''}
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProduit('${ean||''}')">Enregistrer</button>
+    </div>
+  `);
+}
+
+function saveProduit(ean) {
+  const newEan = document.getElementById('ep-ean').value.trim();
+  const nom = document.getElementById('ep-nom').value.trim();
+  if (!newEan || !nom) { alert('EAN et nom requis.'); return; }
+  let prod = ean ? getProduit(ean) : null;
+  if (prod) {
+    prod.nom = nom;
+    prod.fournisseur_principal = document.getElementById('ep-fournisseur').value.trim();
+    prod.notes = document.getElementById('ep-notes').value.trim();
+  } else {
+    if (getProduit(newEan)) { alert('Un produit avec cet EAN existe déjà.'); return; }
+    db.produits.push({ id:genId(), ean:newEan, nom, fournisseur_principal:document.getElementById('ep-fournisseur').value.trim(), notes:document.getElementById('ep-notes').value.trim() });
+  }
+  saveData(); closeModal(); renderProduits();
+}
+
+function supprimerProduit(ean) {
+  if (db.cycles.some(c => c.ean === ean && c.statut !== 'termine')) {
+    alert('Impossible : ce produit a des cycles actifs. Clôturez-les d\'abord.'); return;
+  }
+  if (!confirm('Supprimer ce produit et tout son historique ?')) return;
+  db.produits = db.produits.filter(p => p.ean !== ean);
+  db.cycles = db.cycles.filter(c => c.ean !== ean);
+  saveData(); closeModal(); showPage('produits');
+}
+
+// ============================================================
+// CSV IMPORT
+// ============================================================
+let importState = { rawText:null, filename:null, rows:[], headers:[], separator:',', mapping:{ean:null,quantite:null,date:null}, parsedRows:[], anomalies:[] };
+
+function handleFileSelect(file) {
+  if (!file) return;
+  importState.filename = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { importState.rawText = e.target.result; parseCSVHeaders(); showMappingSection(); };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSVHeaders() {
+  const lines = importState.rawText.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return;
+  const sep = detectSep(lines[0]);
+  importState.separator = sep;
+  importState.headers = parseLine(lines[0], sep);
+  importState.rows = lines.slice(1).filter(l => l.trim()).map(l => parseLine(l, sep));
+}
+
+function detectSep(line) {
+  const counts = {',':0,';':0,'\t':0,'|':0};
+  for (const c of line) if (counts[c]!==undefined) counts[c]++;
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+function parseLine(line, sep) {
+  const res = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; }
+    else if (ch === sep && !inQ) { res.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  res.push(cur.trim()); return res;
+}
+
+function autoDetectMapping(headers) {
+  const h = headers.map(x => x.toLowerCase());
+  const find = (pats) => { for (const p of pats) { const i = h.findIndex(x=>x.includes(p)); if (i>=0) return headers[i]; } return null; };
+  return {
+    ean: find(['ean','asin','barcode','code-barres','ref','sku','upc','isbn']),
+    quantite: find(['qte','quantite','quantity','qty','vendu','sold','ventes','units','nb']),
+    date: find(['date','jour','day','period','periode','semaine'])
+  };
+}
+
+function showMappingSection() {
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('import-mapping-section').classList.remove('hidden');
+  document.getElementById('import-preview-section').classList.add('hidden');
+  const mapping = autoDetectMapping(importState.headers);
+  importState.mapping = mapping;
+
+  const mkSel = (id, cur) => {
+    const opts = importState.headers.map(h => `<option value="${escAttr(h)}" ${h===cur?'selected':''}>${escHtml(h)}</option>`).join('');
+    return `<select id="${id}"><option value="">— Non mappé —</option>${opts}</select>`;
+  };
+
+  document.getElementById('import-mapping-content').innerHTML = `
+    <div class="alert alert-info mb-16"><span class="alert-icon">ℹ</span>
+      Fichier : <strong>${escHtml(importState.filename)}</strong> — ${importState.rows.length} ligne(s).
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Colonne EAN *</label>${mkSel('map-ean', mapping.ean)}</div>
+      <div class="form-group"><label>Colonne Quantité vendue *</label>${mkSel('map-qte', mapping.quantite)}</div>
+      <div class="form-group"><label>Colonne Date de vente</label>${mkSel('map-date', mapping.date)}<div class="form-hint">Optionnelle mais recommandée</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--gray-500)">Les autres colonnes seront conservées en lecture seule.</div>
+  `;
+}
+
+function goToMapping() {
+  document.getElementById('import-preview-section').classList.add('hidden');
+  document.getElementById('import-mapping-section').classList.remove('hidden');
+}
+
+function previewImport() {
+  const eanCol = document.getElementById('map-ean')?.value;
+  const qteCol = document.getElementById('map-qte')?.value;
+  const dateCol = document.getElementById('map-date')?.value;
+  if (!eanCol || !qteCol) { alert('Les colonnes EAN et Quantité sont requises.'); return; }
+  importState.mapping = { ean:eanCol, quantite:qteCol, date:dateCol||null };
+
+  const eanIdx = importState.headers.indexOf(eanCol);
+  const qteIdx = importState.headers.indexOf(qteCol);
+  const dateIdx = dateCol ? importState.headers.indexOf(dateCol) : -1;
+
+  const parsed = importState.rows.map((row, i) => {
+    const ean = (row[eanIdx]||'').trim();
+    const rawQ = row[qteIdx]||'';
+    const qte = parseInt(rawQ.replace(/[^\d\-]/g,''));
+    const dateRaw = dateIdx>=0 ? (row[dateIdx]||'').trim() : null;
+    const extra = {};
+    importState.headers.forEach((h,j) => { if(j!==eanIdx&&j!==qteIdx&&j!==dateIdx) extra[h]=row[j]||''; });
+    return { ean, quantite_vendue:isNaN(qte)?0:qte, date_vente:dateRaw?parseDate(dateRaw):null, extra, rawQte:rawQ, rowIdx:i };
+  }).filter(r => r.ean);
+
+  importState.parsedRows = parsed;
+
+  const anomalies = [];
+  parsed.forEach(r => {
+    const prod = getProduit(r.ean);
+    const cycle = db.cycles.find(c => c.ean===r.ean && c.statut==='en_vente');
+    if (!prod) anomalies.push({ rowIdx:r.rowIdx, type:'ean_inconnu', msg:`EAN ${r.ean} : produit inconnu` });
+    else if (!cycle) anomalies.push({ rowIdx:r.rowIdx, type:'pas_en_vente', msg:`EAN ${r.ean} : aucun cycle en_vente actif` });
+    else if (cycle.stock_disponible - r.quantite_vendue < 0) anomalies.push({ rowIdx:r.rowIdx, type:'stock_negatif', msg:`EAN ${r.ean} : ${r.quantite_vendue} vendus > stock (${cycle.stock_disponible})` });
+  });
+  importState.anomalies = anomalies;
+
+  document.getElementById('import-mapping-section').classList.add('hidden');
+  document.getElementById('import-preview-section').classList.remove('hidden');
+  document.getElementById('import-preview-filename').textContent = importState.filename;
+
+  const anomEl = document.getElementById('import-anomalies-preview');
+  anomEl.innerHTML = anomalies.length > 0
+    ? `<div class="alert alert-warning"><span class="alert-icon">⚠</span><div><strong>${anomalies.length} anomalie(s)</strong> — marquées ci-dessous, l'import continuera quand même.<ul style="margin-top:8px;padding-left:16px;font-size:12px">${anomalies.map(a=>`<li>${escHtml(a.msg)}</li>`).join('')}</ul></div></div>`
+    : `<div class="alert alert-success"><span class="alert-icon">✓</span>Aucune anomalie détectée.</div>`;
+
+  const anomSet = new Set(anomalies.map(a => a.rowIdx));
+  const head = document.getElementById('import-preview-head');
+  const body = document.getElementById('import-preview-body');
+  const extraKeys = Object.keys(parsed[0]?.extra || {});
+  head.innerHTML = `<th>EAN</th><th>Qté</th><th>Date</th>${extraKeys.map(k=>`<th>${escHtml(k)}</th>`).join('')}<th>Statut</th>`;
+  body.innerHTML = parsed.slice(0,100).map(r => {
+    const anoms = anomalies.filter(a => a.rowIdx===r.rowIdx);
+    return `<tr class="${anoms.length?'anomaly-row':''}">
+      <td class="font-mono">${escHtml(r.ean)}</td>
+      <td>${r.quantite_vendue}</td>
+      <td>${escHtml(r.date_vente||'—')}</td>
+      ${extraKeys.map(k=>`<td style="font-size:11px;color:var(--gray-400)">${escHtml(String(r.extra[k]||''))}</td>`).join('')}
+      <td>${anoms.length?anoms.map(a=>`<span class="anomaly-badge">${escHtml(a.type)}</span>`).join(' '):'<span style="color:var(--success)">✓</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('import-preview-stats').textContent = `${parsed.length} ligne(s) à importer${parsed.length>100?' (100 premières affichées)':''}.`;
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+  const m2 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+  if (m2) return `${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+  return s.length >= 10 ? s.substring(0,10) : null;
+}
+
+function validerImport() {
+  const parsed = importState.parsedRows;
+  if (!parsed?.length) { alert('Aucune ligne à importer.'); return; }
+
+  const record = { id:genId(), date_import:today(), nom_fichier:importState.filename, lignes:[], anomalies:importState.anomalies||[] };
+  const toClose = [];
+
+  parsed.forEach(r => {
+    if (!r.ean) return;
+    const cycle = db.cycles.find(c => c.ean===r.ean && c.statut==='en_vente');
+    record.lignes.push({ ean:r.ean, quantite_vendue:r.quantite_vendue, date_vente:r.date_vente, extra:r.extra });
+    if (cycle) {
+      cycle.stock_disponible = (cycle.stock_disponible||0) - r.quantite_vendue;
+      if (cycle.stock_disponible <= 0) toClose.push(cycle);
+    }
+  });
+
+  db.imports.push(record);
+  saveData();
+
+  if (toClose.length > 0) {
+    const names = toClose.map(c => { const p = getProduit(c.ean); return `• ${p?p.nom:c.ean} (stock: ${c.stock_disponible})`; }).join('\n');
+    if (confirm(`${toClose.length} cycle(s) ont atteint un stock nul ou négatif :\n${names}\n\nPasser au statut "Terminé" ?`)) {
+      toClose.forEach(c => { c.statut='termine'; c.date_cloture=today(); });
+      saveData();
+    }
+  }
+
+  resetImport();
+  renderImportHistory();
+
+  const n = record.lignes.length;
+  const an = record.anomalies.length;
+  openModal(`
+    <div class="modal-title">✓ Import effectué</div>
+    <div class="alert alert-success"><span class="alert-icon">✓</span>${n} ligne(s) importée(s).</div>
+    ${an>0?`<div class="alert alert-warning"><span class="alert-icon">⚠</span>${an} anomalie(s) enregistrée(s). Consultez l'historique pour les détails.</div>`:''}
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">OK</button>
+      <button class="btn btn-secondary" onclick="closeModal();showPage('dashboard')">Voir le dashboard</button>
+    </div>
+  `);
+}
+
+function resetImport() {
+  importState = { rawText:null, filename:null, rows:[], headers:[], separator:',', mapping:{ean:null,quantite:null,date:null}, parsedRows:[], anomalies:[] };
+  document.getElementById('drop-zone').style.display = '';
+  document.getElementById('import-mapping-section').classList.add('hidden');
+  document.getElementById('import-preview-section').classList.add('hidden');
+  document.getElementById('csv-file-input').value = '';
+}
+
+function renderImportHistory() {
+  const tbody = document.getElementById('imports-history-tbody');
+  const imports = [...db.imports].sort((a,b) => (b.date_import||'').localeCompare(a.date_import||''));
+  if (!imports.length) { tbody.innerHTML = `<tr><td colspan="6" class="table-empty">Aucun import effectué.</td></tr>`; return; }
+  tbody.innerHTML = imports.map(imp => {
+    const eans = new Set((imp.lignes||[]).map(l=>l.ean)).size;
+    return `<tr>
+      <td>${fmtDate(imp.date_import)}</td>
+      <td class="font-mono" style="font-size:12px">${escHtml(imp.nom_fichier||'')}</td>
+      <td>${imp.lignes?.length||0}</td>
+      <td>${eans}</td>
+      <td>${imp.anomalies?.length>0?`<span style="color:var(--warning);font-weight:600">${imp.anomalies.length}</span>`:'<span style="color:var(--success)">0</span>'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="showImportDetail('${imp.id}')">Détail</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function showImportDetail(id) {
+  const imp = db.imports.find(i => i.id===id);
+  if (!imp) return;
+  openModal(`
+    <div class="modal-title">Import du ${fmtDate(imp.date_import)}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px">Fichier : <span class="font-mono">${escHtml(imp.nom_fichier||'')}</span></div>
+    ${imp.anomalies?.length>0?`<div class="alert alert-warning mb-16"><span class="alert-icon">⚠</span><div><strong>${imp.anomalies.length} anomalie(s) :</strong><ul style="margin-top:6px;padding-left:16px;font-size:12px">${imp.anomalies.map(a=>`<li>${escHtml(a.msg)}</li>`).join('')}</ul></div></div>`:''}
+    <div style="max-height:300px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--gray-50)"><th style="padding:8px;text-align:left;border-bottom:1px solid var(--gray-200)">EAN</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--gray-200)">Qté</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--gray-200)">Date</th></tr></thead>
+        <tbody>${(imp.lignes||[]).map(l=>`<tr><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)" class="font-mono">${escHtml(l.ean)}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">${l.quantite_vendue}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">${fmtDate(l.date_vente)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Fermer</button></div>
+  `);
+}
+
+// Drag & drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleFileSelect(file);
+});
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function renderSettings() {
+  const p = db.params || { maxJours:60, bloqueJours:14, stockSemaines:3 };
+  document.getElementById('param-max-jours').value = p.maxJours||60;
+  document.getElementById('param-bloque-jours').value = p.bloqueJours||14;
+  document.getElementById('param-stock-semaines').value = p.stockSemaines||3;
+}
+
+function saveParams() {
+  if (!db.params) db.params = {};
+  db.params.maxJours = parseInt(document.getElementById('param-max-jours').value)||60;
+  db.params.bloqueJours = parseInt(document.getElementById('param-bloque-jours').value)||14;
+  db.params.stockSemaines = parseInt(document.getElementById('param-stock-semaines').value)||3;
+  saveData();
 }
 
 function exportJSON() {
-  const data = { products, settings, exportedAt: new Date().toISOString(), version: '1.0' };
-  download(JSON.stringify(data, null, 2), `vinted_backup_${dateSlug()}.json`, 'application/json');
-  toast('Export JSON téléchargé ✓', 'success');
+  downloadFile(`fba_tracker_${today()}.json`, JSON.stringify(db, null, 2), 'application/json');
+}
+
+function exportCyclesCSV() {
+  const h = ['id','ean','nom_produit','fournisseur','statut','date_commande','date_reception','date_envoi_amazon','date_mise_en_vente','date_cloture','quantite_commandee','quantite_recue','quantite_envoyee_amazon','stock_disponible','prix_achat_unitaire','numero_shipment_fba','jours_ecoules'];
+  const rows = db.cycles.map(c => {
+    const p = getProduit(c.ean);
+    const j = daysFromToday(c.date_commande);
+    return [c.id,c.ean,p?p.nom:'',p?(p.fournisseur_principal||''):'',c.statut,c.date_commande||'',c.date_reception||'',c.date_envoi_amazon||'',c.date_mise_en_vente||'',c.date_cloture||'',c.quantite_commandee||'',c.quantite_recue||'',c.quantite_envoyee_amazon||'',c.stock_disponible||'',c.prix_achat_unitaire||'',c.numero_shipment_fba||'',j!==null?j:'']
+      .map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';');
+  });
+  downloadFile(`fba_cycles_${today()}.csv`, [h.join(';'),...rows].join('\n'), 'text/csv;charset=utf-8');
+}
+
+function downloadFile(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content],{type}));
+  a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function importJSON(input) {
   const file = input.files[0]; if (!file) return;
+  if (!confirm('Ceci remplacera TOUTES les données. Continuer ?')) { input.value=''; return; }
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      if (!Array.isArray(data.products)) throw new Error('Format invalide');
-      showConfirm('Importer les données ?',
-        `${data.products.length} produit(s) vont remplacer vos données actuelles.`, () => {
-        products = data.products;
-        if (data.settings) settings = { ...settings, ...data.settings };
-        save();
-        toast(`Import réussi — ${products.length} produits ✓`, 'success');
-        renderDashboard();
-      });
-    } catch { toast('Fichier JSON invalide.', 'error'); }
+      if (!data.produits || !data.cycles) throw new Error('Format invalide');
+      db = data;
+      if (!db.params) db.params = { maxJours:60, bloqueJours:14, stockSemaines:3 };
+      saveData(); alert('Restauration effectuée !'); renderSettings(); showPage('dashboard');
+    } catch(err) { alert('Erreur : ' + err.message); }
     input.value = '';
   };
   reader.readAsText(file);
 }
 
-const CSV_HEADERS = ['nom','categorie','marque','taille','prixAchat','fraisAchat','prixVente','prixVendu',
-  'fraisVinted','fraisEmballage','fraisLivraison','dateAchat','dateMiseEnLigne','dateVente','statut','canal','commentaire'];
-
-function exportCSV() {
-  const rows = [CSV_HEADERS.join(',')];
-  products.forEach(p => {
-    rows.push([
-      csvCell(p.name), csvCell(p.category), csvCell(p.brand), csvCell(p.size),
-      p.purchasePrice, p.purchaseFees, p.listingPrice, p.soldPrice,
-      p.vintedFees, p.packagingFees, p.shippingFees,
-      p.purchaseDate, p.listingDate, p.saleDate, p.status, p.channel,
-      csvCell(p.comment)
-    ].join(','));
-  });
-  download(rows.join('\n'), `vinted_produits_${dateSlug()}.csv`, 'text/csv;charset=utf-8;');
-  toast('Export CSV téléchargé ✓', 'success');
+function confirmerReset() {
+  openModal(`
+    <div class="modal-title" style="color:var(--danger)">⚠ Réinitialiser toutes les données</div>
+    <p style="color:var(--gray-600);margin-bottom:16px">Cette action <strong>supprimera définitivement</strong> tous les produits, cycles et imports.</p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="exportJSON();closeModal()">Exporter d'abord</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-danger" onclick="executeReset()">Tout supprimer</button>
+    </div>
+  `);
 }
 
-function importCSV(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const lines = e.target.result.split('\n').filter(l => l.trim());
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
-      const rows = lines.slice(1);
-      const imported = [];
-      rows.forEach(row => {
-        const vals = parseCSVRow(row);
-        const obj = {};
-        headers.forEach((h,i) => obj[h] = vals[i] || '');
-        imported.push({
-          id: uid(), name: obj.nom, category: obj.categorie, brand: obj.marque, size: obj.taille,
-          purchasePrice: n(obj.prixAchat), purchaseFees: n(obj.fraisAchat),
-          listingPrice: n(obj.prixVente), soldPrice: n(obj.prixVendu),
-          vintedFees: n(obj.fraisVinted), packagingFees: n(obj.fraisEmballage), shippingFees: n(obj.fraisLivraison),
-          purchaseDate: obj.dateAchat, listingDate: obj.dateMiseEnLigne, saleDate: obj.dateVente,
-          status: obj.statut || 'stock', channel: obj.canal, comment: obj.commentaire, photo: ''
-        });
-      });
-      if (!imported.length) { toast('Aucun produit trouvé dans le CSV.', 'error'); return; }
-      showConfirm('Importer le CSV ?',
-        `${imported.length} produit(s) seront ajoutés à votre liste.`, () => {
-        products = [...imported, ...products];
-        save();
-        toast(`${imported.length} produit(s) importés ✓`, 'success');
-        input.value = '';
-      });
-    } catch(err) { toast('Erreur lecture CSV : ' + err.message, 'error'); }
-  };
-  reader.readAsText(file);
-}
+function executeReset() { db = defaultData(); saveData(); closeModal(); showPage('dashboard'); }
 
-function parseCSVRow(row) {
-  const result = []; let cur = ''; let inQ = false;
-  for (let i = 0; i < row.length; i++) {
-    const ch = row[i];
-    if (ch === '"') { inQ = !inQ; continue; }
-    if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; continue; }
-    cur += ch;
-  }
-  result.push(cur.trim());
-  return result;
+// ============================================================
+// MODAL
+// ============================================================
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-backdrop').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function closeModalBackdrop(e) { if (e.target===document.getElementById('modal-backdrop')) closeModal(); }
 
-function downloadCSVTemplate() {
-  const sample = [CSV_HEADERS.join(','),
-    '"Chemise bleue","chemise","Zara","M","3","0.5","14","14","1.2","0.3","0","2024-01-15","2024-01-16","2024-01-20","sold","brocante","Exemple"'
-  ].join('\n');
-  download(sample, 'vinted_modele.csv', 'text/csv;charset=utf-8;');
-}
-
-function csvCell(v) {
-  if (!v) return '';
-  return '"' + String(v).replace(/"/g, '""') + '"';
-}
-function download(content, filename, mime) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
-  a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-function dateSlug() { return new Date().toISOString().slice(0,10); }
-
-function confirmReset() {
-  showConfirm('Réinitialiser toutes les données ?',
-    'Tous vos produits et paramètres seront supprimés. Cette action est irréversible.', () => {
-    products = []; settings = { monthlyGoal: MONTHLY_GOAL_DEFAULT };
-    save();
-    toast('Données réinitialisées.', 'success');
-    renderDashboard();
-  });
-}
-
-// ── TOAST ──────────────────────────────────────────────────
-function toast(msg, type = '') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s';
-    setTimeout(() => el.remove(), 300); }, 3000);
-}
-
-// ── CONFIRM DIALOG ─────────────────────────────────────────
-let _confirmCb = null;
-function showConfirm(title, msg, cb) {
-  document.getElementById('confirm-title').textContent = title;
-  document.getElementById('confirm-msg').textContent   = msg;
-  _confirmCb = cb;
-  document.getElementById('confirm-overlay').classList.add('open');
-}
-function closeConfirm() {
-  document.getElementById('confirm-overlay').classList.remove('open');
-  _confirmCb = null;
-}
-document.getElementById('confirm-ok-btn').addEventListener('click', () => {
-  if (_confirmCb) _confirmCb();
-  closeConfirm();
-});
-
-// ── KEYBOARD ───────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    closeProductModal();
-    closeConfirm();
-  }
-});
-
-// ── INIT ───────────────────────────────────────────────────
-function init() {
-  load();
-  if (!products.length) {
-    loadSampleData();
-    toast('Données d\'exemple chargées. Bienvenue ! 👗', 'success');
-  }
-  renderDashboard();
-}
-
-init();
+// ============================================================
+// INIT
+// ============================================================
+renderDashboard();
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
 </script>
 </body>
 </html>
